@@ -63,10 +63,12 @@ class entity(base_object):
 class animal(entity):
     targetx = 0
     targety = 0
+    velocity = 1
     
-    def __init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure):
+    def __init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure, velocity):
         self.targetx = x
         self.targety = y
+        self.velocity = velocity
         entity.__init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure)
 
     def getNewTarget(self):
@@ -103,12 +105,25 @@ class animal(entity):
     def Wanna(self):
         return randint(0, 1)
 
+    def move(self):
+        movx = 0
+        movy = 0
+        difx = self.targetx - self.x
+        dify = self.targety - self.y
+        if(self.targetx < self.x): movx = -self.velocity if difx < -self.velocity - 1 else difx
+        if(self.targetx > self.x): movx = self.velocity if difx > self.velocity - 1 else difx
+        if(self.targety < self.y): movy = -self.velocity if dify < -self.velocity - 1 else dify
+        if(self.targety > self.y): movy = self.velocity if dify > self.velocity - 1 else dify
+        expval = movx if movx > movy else movy
+        self.energy -= self.energy_expenditure * expval
+        super(animal, self).move(movx, movy)
+
 #Double cell life, never grows but able to self-replicate
 class cubeanoid(animal):
     
     def __init__(self, name, x, y):
         print(name + ": I'm Alive!")
-        animal.__init__(self, "cubenoid", name, 2, (0,128,255), x, y, 10000, 5000, 1)
+        animal.__init__(self, "cubenoid", name, 2, (0,128,255), x, y, 10000, 5000, 1, 3)
 
     def move(self):
         if(self.energy >= self.max_energy):
@@ -121,17 +136,8 @@ class cubeanoid(animal):
         
         if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
             self.getNewTarget()
-        movx = 0
-        movy = 0
-        difx = self.targetx - self.x
-        dify = self.targety - self.y
-        if(self.targetx < self.x): movx = -3 if difx < -2 else difx
-        if(self.targetx > self.x): movx = 3 if difx > 2 else difx
-        if(self.targety < self.y): movy = -3 if dify < -2 else dify
-        if(self.targety > self.y): movy = 3 if dify > 2 else dify
-        expval = movx if movx > movy else movy
-        self.energy -= self.energy_expenditure * expval
-        super(cubeanoid, self).move(movx, movy)
+
+        super(cubeanoid, self).move()
 
     def CanSplit(self):
         return self.energy >= self.max_energy - 1000
@@ -196,7 +202,7 @@ class elipsalottle(animal):
         if(self.gender == "male"):
             base_color = (255,255,0)
 
-        animal.__init__(self, "elipsalottle", name, 20, base_color, x, y, 10000, 5000, 2)
+        animal.__init__(self, "elipsalottle", name, 20, base_color, x, y, 10000, 5000, 2, 1)
         
     def getFieldOfView(self):
         return pygame.Rect(self.x - 25, self.y - 25, 50, 50)
@@ -227,20 +233,8 @@ class elipsalottle(animal):
         
         if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
             self.getNewTarget()
-            
-        movx = 0
-        movy = 0
-        difx = self.targetx - self.x
-        dify = self.targety - self.y
 
-        if(self.targetx < self.x): movx = -1 if difx < 0 else difx
-        if(self.targetx > self.x): movx = 1 if difx > 0 else difx
-        if(self.targety < self.y): movy = -1 if dify < 0 else dify
-        if(self.targety > self.y): movy = 1 if dify > 0 else dify
-        
-        expval = movx if movx > movy else movy
-        self.energy -= self.energy_expenditure * expval
-        super(elipsalottle, self).move(movx, movy)
+        super(elipsalottle, self).move()
             
     def process(self):
         if(self.energy > 0): self.energy -= self.energy_expenditure
