@@ -52,14 +52,6 @@ class entity(base_object):
         self.energy_expenditure = living_energy_expenditure
         base_object.__init__(self, objtype, name, size, color, x, y)
 
-    def move(self, xchange, ychange):
-        self.x += xchange
-        self.y += ychange
-        if(self.x + self.size >= UNIVERSE_WIDTH): self.x = UNIVERSE_WIDTH - self.size
-        if(self.x < 0): self.x = 0
-        if(self.y + self.size >= UNIVERSE_HEIGHT): self.y = UNIVERSE_HEIGHT - self.size
-        if(self.y < 0): self.y = 0  
-
 class animal(entity):
     targetx = 0
     targety = 0
@@ -116,7 +108,13 @@ class animal(entity):
         if(self.targety > self.y): movy = self.velocity if dify > self.velocity - 1 else dify
         expval = movx if movx > movy else movy
         self.energy -= self.energy_expenditure * expval
-        super(animal, self).move(movx, movy)
+
+        self.x += movx
+        self.y += movy
+        if(self.x + self.size >= UNIVERSE_WIDTH): self.x = UNIVERSE_WIDTH - self.size
+        if(self.x < 0): self.x = 0
+        if(self.y + self.size >= UNIVERSE_HEIGHT): self.y = UNIVERSE_HEIGHT - self.size
+        if(self.y < 0): self.y = 0  
 
 #Double cell life, never grows but able to self-replicate
 class cubeanoid(animal):
