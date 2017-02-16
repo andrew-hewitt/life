@@ -58,6 +58,9 @@ class animal(entity):
     velocity = 1
     current_attention_span = 0
     max_attention_span = 10000
+    is_adult = False
+
+    freeze_counter = 0
     
     def __init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure, velocity):
         self.targetx = x
@@ -75,6 +78,12 @@ class animal(entity):
     def need_to_eat(self):
         if(self.energy <= self.max_energy): # / 2):
             return True
+        else:
+            return False
+
+    def want_to_mate(self):
+        if(self.energy >= self.max_energy / 2 and self.is_adult):
+            return bool(randint(0, 1))
         else:
             return False
 
@@ -117,6 +126,13 @@ class animal(entity):
         expval = movx if movx > movy else movy
         self.energy -= self.energy_expenditure * expval
 
+        #Check for freeze to ensure no one gets stuck
+        if(self.x == movx and self.y == movy):
+            freeze_counter += 1
+            if(freeze_counter == 1000):
+                freeze_counter == 0
+                current_attention_span == 0
+                self.getNewTarget()
         self.x += movx
         self.y += movy
         if(self.x + self.size >= UNIVERSE_WIDTH): self.x = UNIVERSE_WIDTH - self.size
@@ -164,7 +180,7 @@ class BigRed(entity):
 
     def __init__(self, name, x, y):
         print(name + ": I Live.")
-        entity.__init__(self, "bigred", name, 10, (255,0,0), x, y, 100000, 100000, 2)
+        entity.__init__(self, "bigred", name, 10, (255,0,0), x, y, 100000, 50000, 2)
 
     def need_to_eat(self):
         if(self.energy <= self.max_energy / 2):
@@ -196,22 +212,24 @@ class BigRed(entity):
         if(self.size <= 0 or self.energy <= 0):
             self.is_dead = True
 
+#Slightly intelligent moving creature that eats BigReds.
 class elipsalottle(animal):
     hunger = 5000
     eat_expenditure = 3
+    mate_expenditure = 3000
     poo_timer = 0
     disposal = 0
     field_of_vision = 1000
     gender = "male"
+    max_size = 20
 
     def __init__(self, name, x, y):
         print(name + ": What am I?")
         self.gender = "male" if randint(0, 1) == 0 else "female"
-        base_color = (255,102,140)
-        if(self.gender == "male"):
-            base_color = (255,255,0)
+        startsize = 5
+        base_color = (255,255,0) if(self.gender == "male") else (255,102,140)
 
-        animal.__init__(self, "elipsalottle", name, 20, base_color, x, y, 10000, 5000, 2, 1)
+        animal.__init__(self, "elipsalottle", name, 5, base_color, x, y, 10000, 5000, 2, 1)
         
     def getFieldOfView(self):
         return pygame.Rect(self.x - 25, self.y - 25, 50, 50)
@@ -230,7 +248,6 @@ class elipsalottle(animal):
             self.energy = self.max_energy
             ScatterFood(int(self.disposal), self.x, self.y)
             if(bool(randint(0, 1))): DropBigRedSeed(self.name, self.x, self.y)
-            print(self.name + " left a steaming hunk of Grade A")
             self.disposal = 0
         
     def eat(self, energy_value):
@@ -238,9 +255,17 @@ class elipsalottle(animal):
             self.energy += energy_value - self.eat_expenditure
             self.hunger -= energy_value / 2
             if(self.energy > self.max_energy):
+                if(self.size < 20):
+                    self.size += 5
+                else:
+                    self.is_adult = True
                 self.disposal = (self.energy - self.max_energy) / 200 # + (self.energy / 4)) / 200
                 self.poo_timer = 1000
 
+    def mate(self):
+        self.energy -= self.mate_expenditure
+        self.getNewTarget()
+        
     def move(self):
         if(self.targetx == 0 and self.targety == 0): return
         if(self.energy >= self.max_energy):
@@ -275,7 +300,21 @@ class elipsalottle(animal):
                self.targety = big_red.y
                self.current_attention_span = self.max_attention_span
 
-cubeanoids = [cubeanoid("Adam", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)), cubeanoid("Eve", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5))]
+    def switch_gender(self):
+        if(self.gender == "male"):
+            self.gender == "female"
+            self.color = (255,102,140)
+        else:
+            self.gender == "male"
+            self.color = (255,255,0)
+
+        print(self.name + " has become a " + self.gender + ".")
+            
+
+cubeanoids = [cubeanoid("Adam", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)),
+              cubeanoid("Eve", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)),
+              cubeanoid("Jeff", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)),
+              cubeanoid("Bob", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5))]
 food_available = []
 big_reds = [BigRed("BigRed1", randint(25, UNIVERSE_WIDTH - 25), randint(10, UNIVERSE_HEIGHT - 25)),
             BigRed("BigRed2", randint(25, UNIVERSE_WIDTH - 25), randint(10, UNIVERSE_HEIGHT - 25)),
@@ -297,10 +336,9 @@ def ScatterFood(amount, basex, basey):
 
 def DropBigRedSeed(droppername, x, y):
     big_reds.append(BigRed(droppername + str(len(big_reds)), x, y))
-    print(droppername + " dropped a big red seed.")
 
-#Randomly add some food...
-for i in range(100): SpawnFood()
+#Randomly add some food to help the cubeanoids survive longer than a few minutes...
+for i in range(500): SpawnFood()
 
 clock = pygame.time.Clock()
 
@@ -354,7 +392,29 @@ while not done:
                     energytaken = 5000
                     el.eat(energytaken)
                     if(bg.energy > 0): bg.energy -= energytaken
+                    
+        if(el.want_to_mate() and len([x for x in elipsalottles if x.gender != el.gender]) == -1):
+            el.switch_gender()
 
+        for el2 in [x for x in elipsalottles if x != el]: #elipsalottles:
+            if(el.CheckCollision(el2)):
+                if(el.gender == el2.gender and (el.is_adult and el2.is_adult)):
+                    if(bool(randint(0, 1))):
+                       el2.energy -= 5
+                       el2.getNewTarget()
+                    else:
+                       el.energy -= 5
+                       el.getNewTarget()
+                else:
+                    if(el.want_to_mate() and el2.want_to_mate()):
+                        elipsalottles.append(elipsalottle(str(el.name) + str(len(cubeanoids)), el.x + el.size, el.y + el.size))
+                        el.mate()
+                        el2.mate()
+                        
+            elif(el.CheckFieldOfView(el2) > 0 and el.want_to_mate() and el2.is_adult and el.gender != el2.gender):
+                el.targetx = el2.targetx
+                el.targety = el2.targety
+        
         el.process()
         if(el.is_dead):
             elipsalottles.remove(el)
@@ -368,7 +428,14 @@ while not done:
                 if(bg.CheckCollision(cn) > 0):
                     bg.eat(cn.energy)
                     print(cn.name + " was eaten by " + bg.name)
-                    cubeanoids.remove(cn)           
+                    cubeanoids.remove(cn)
+
+                for bg2 in [x for x in big_reds if x != bg]:
+                    if(bg.CheckCollision(bg2) > 0):
+                        #absorb the other big red
+                        bg.eat(bg2.energy)
+                        big_reds.remove(bg2)
+                        
         bg.process()
         if(bg.is_dead):
             big_reds.remove(bg)
