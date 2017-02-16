@@ -10,6 +10,7 @@ pygame.display.set_caption('Microverse')
 done = False
 extinction_list = []
 
+
 class entity(object):
     name = ''
     objtype = ''
@@ -79,7 +80,7 @@ class cubeanoid(entity):
         if(self.energy > 1000):
             return randint(0, 1)
         else:
-            return self.NeedToMove()
+            return int(self.NeedToMove())
 
     def move(self):
         if(self.energy >= self.max_energy):
@@ -107,7 +108,11 @@ class cubeanoid(entity):
     def CanSplit(self):
         return self.energy >= self.max_energy - 1000
 
-#Static, unmoving creature that absorbs anything stupid enough to crawl inside.
+    def process(self):
+        if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)):
+           self.getNewTarget()
+
+#Static, unmoving creature that absorbs any cubanoids stupid enough to crawl inside.
 #Will grow and shrink based on energy.
 class BigRed(entity):
     max_energy = 20000
@@ -115,7 +120,7 @@ class BigRed(entity):
     hunger = 10000
     size = 10
     energy_expenditure = 2
-    eat_ependiture = 1
+    eat_expenditure = 1
 
     is_dead = False
 
@@ -130,27 +135,151 @@ class BigRed(entity):
             return False
     
     def eat(self, energy_value):         
-        self.energy += (energy_value / 2) - self.eat_ependiture
+        self.energy += (energy_value / 2) - self.eat_expenditure
         self.size += 2
         self.hunger -= energy_value / 2
         self.x -= 1
         self.y -= 1
         if(self.energy >= self.max_energy):
             pass #marker for something to happen at full energy.
-
+            
     def process(self):
         self.energy -= self.energy_expenditure
         self.hunger += 1
-        if(self.hunger == 0 or self.size == 0 or self.energy == 0):
-            is_dead = True
+
+        if(self.energy > 0 and self.energy <= self.max_energy / 4):
+            if(self.size > 0): self.size -= 2
+            if(self.size > 0):
+                self.hunger -= 1
+                self.energy += self.energy / self.size / 2
+                self.x += 1
+                self.y += 1
+
+        if(self.size <= 0 or self.energy <= 0):
+            self.is_dead = True
+
+class elipsalottle(entity):
+    targetx = 0
+    targety = 0
+    
+    max_energy = 10000
+    energy = 5000
+    hunger = 5000
+    sizewidth = 20
+    sizelength = 20
+    energy_expenditure = 2
+    eat_expenditure = 3
+    field_of_vision = 1000
+
+    base_color = (255,255,0)
+
+    gender = "male"
+
+    is_dead = False
+
+    def __init__(self, name, x, y):
+        print(name + ": What am I?")
+        self.gender = "male" if randint(0, 1) == 0 else "female"
+        if(self.gender == "male"):
+            self.base_color = (255,255,0)
+        else:
+            self.base_color = (255,102,140)
+        entity.__init__(self, "elipsalottle", name, self.size, self.base_color, x, y)
+        
+    def getNewTarget(self):
+        self.targetx = randint(0, UNIVERSE_WIDTH - self.sizewidth)
+        self.targety = randint(0, UNIVERSE_HEIGHT - self.sizelength)
+        #print(self.name + " set new target to: " + str(self.targetx) + ", " + str(self.targety))
+        
+    def getFieldOfView(self):
+        return pygame.Rect(self.x - 25, self.y - 25, 50, 50)
+
+    def draw(self):
+        pygame.draw.ellipse(screen, self.color, pygame.Rect(self.x, self.y, self.sizewidth, self.sizelength))
+
+    def need_to_eat(self):
+        if(self.energy <= self.max_energy / 2):
+            return True
+        else:
+            return False
+
+    def NeedToMove(self):
+        if(self.energy <= self.max_energy / 2):
+            return True
+        else:
+            return False
+
+    def want_to_eat(self):
+        if(self.need_to_eat()):
+            return 1
+        else:
+            return randint(0, 1)
+        
+    def WantToMove(self):
+        if(self.energy > 1000):
+            return randint(0, 1)
+        else:
+            return int(self.NeedToMove())
+
+    def Wanna(self):
+        return randint(0, 1)
+
+    def need_to_poo(self):
+        if(self.energy - self.max_energy + (self.energy / 4) >= 100):
+            return True
+        else:
+            return False
+
+    def poo(self):
+        disposal = self.energy - self.max_energy + (self.energy / 4)
+        self.energy -= disposal
+        return disposal
+        
+    def eat(self, energy_value):
+        if(energy_value > 0):
+            self.energy += (energy_value / 2) - self.eat_expenditure
+            self.hunger -= energy_value / 2
+
+    def move(self):
+        if(self.targetx == 0 and self.targety == 0): return
+        if(self.energy >= self.max_energy):
+            self.energy -= self.energy_expenditure
+        
+        if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
+            self.getNewTarget()
+            
+        movx = 0
+        movy = 0
+        difx = self.targetx - self.x
+        dify = self.targety - self.y
+
+        if(self.targetx < self.x): movx = -1 if difx < 0 else difx
+        if(self.targetx > self.x): movx = 1 if difx > 0 else difx
+        if(self.targety < self.y): movy = -1 if dify < 0 else dify
+        if(self.targety > self.y): movy = 1 if dify > 0 else dify
+        
+        expval = movx if movx > movy else movy
+        self.energy -= self.energy_expenditure * expval
+        super(elipsalottle, self).move(movx, movy)
+            
+    def process(self):
+        if(self.energy > 0): self.energy -= self.energy_expenditure
+        if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)):
+           self.getNewTarget()
+
+        if(self.energy <= 0):
+            self.is_dead = True
+            print(self.name + " died. RIP.")
             return
 
-        if(self.energy <= self.max_energy / 3):
-            self.size -= 2
-            self.hunger += 1
-            self.energy -= max_energy / self.size
-            self.x += 1
-            self.y += 1
+    def CheckFieldOfView(self, oobj):
+        return self.getFieldOfView().colliderect(oobj.getRect())
+
+    def ChoseToGoToFood(self, big_red):
+        if(self.targetx != big_red.x or self.targety != big_red.y):
+            if(self.need_to_eat() or self.want_to_eat() or self.Wanna()):
+               self.targetx = big_red.x
+               self.targety = big_red.y
         
 class food(entity):
     energy = 200
@@ -162,12 +291,12 @@ class food(entity):
 cubeanoids = [cubeanoid("Adam", 30, 30), cubeanoid("Eve", 100, 250)]
 food_available = []
 big_reds = [BigRed("BigRed", UNIVERSE_WIDTH / 2, UNIVERSE_HEIGHT / 2)]
+elipsalottles = [elipsalottle("A", 300, 300), elipsalottle("B", 500, 500), elipsalottle("C", 100, 400), elipsalottle("D", 200, 100)]
 
 def SpawnFood():
     x = randint(0, UNIVERSE_WIDTH - 5)
     y = randint(0, UNIVERSE_HEIGHT - 5)
     food_available.append(food("food" + str(len(food_available)), x, y))
-
 
 #Randomly add some food...
 for i in range(50): SpawnFood()
@@ -184,6 +313,11 @@ def CheckExtinctions():
         if len(big_reds) == 0:
             print("Big Reds are extinct.")
             extinction_list.append("big_red")
+
+    if("elipsalottle" not in extinction_list):
+        if len(elipsalottles) == 0:
+            print("Elipsalottle are extinct.")
+            extinction_list.append("elipsalottle")
 
 while not done:
     screen.fill((0, 0, 0))
@@ -208,6 +342,25 @@ while not done:
             cn.move()
             cn.draw()
 
+    for el in elipsalottles:
+        #Check if el can see a Big Red
+        for bg in big_reds:
+            if(el.CheckFieldOfView(bg) > 0):
+                el.ChoseToGoToFood(bg)
+                    
+            if(el.CheckCollision(bg) > 0):                    
+                if(el.need_to_eat() or el.want_to_eat()):
+                    energytaken = 100
+                    el.eat(energytaken)
+                    if(bg.energy > 0): bg.energy -= energytaken
+
+        el.process()
+        if(el.is_dead):
+            elipsalottles.remove(el)
+        else:
+            el.move()
+            el.draw()
+
     for bg in big_reds:
         if(bg.need_to_eat()):
             for cn in cubeanoids:
@@ -227,5 +380,3 @@ while not done:
     SpawnFood()
     pygame.display.flip()
     clock.tick(60)
-
-
