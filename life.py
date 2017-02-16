@@ -10,16 +10,14 @@ pygame.display.set_caption('Microverse')
 done = False
 extinction_list = []
 
-
-class entity(object):
+class base_object(object):
     name = ''
-    objtype = ''
     color = (0, 128, 255)
 
     x = 30
     y = 30
     size = 10
-    
+
     def __init__(self, objtype, name, size, color, x, y):
         self.name = name
         self.x = x
@@ -30,14 +28,6 @@ class entity(object):
     def draw(self):
         pygame.draw.rect(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
 
-    def move(self, xchange, ychange):
-        self.x += xchange
-        self.y += ychange
-        if(self.x + self.size >= UNIVERSE_WIDTH): self.x = UNIVERSE_WIDTH - self.size
-        if(self.x < 0): self.x = 0
-        if(self.y + self.size >= UNIVERSE_HEIGHT): self.y = UNIVERSE_HEIGHT - self.size
-        if(self.y < 0): self.y = 0
-
     def getRect(self):
         rectsize = self.size if self.size >= 3 else 3
         return pygame.Rect(self.x, self.y, rectsize, rectsize)
@@ -45,31 +35,59 @@ class entity(object):
     def CheckCollision(self, oobj):
         return self.getRect().colliderect(oobj.getRect())
 
-#Double cell life, never grows but able to self-replicate
-class cubeanoid(entity):
+class food(base_object):
+    energy = 200    
+    def __init__(self, name, x, y):
+        base_object.__init__(self, "food", name, 1, (0,255,0), x, y)
+        
+class entity(base_object):
+    is_dead = False
+    max_energy = 1
+    energy = 1
+    energy_expenditure = 1
+    
+    def __init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure):
+        self.max_energy = max_energy
+        self.energy = start_energy
+        self.energy_expenditure = living_energy_expenditure
+        base_object.__init__(self, objtype, name, size, color, x, y)
+
+    def move(self, xchange, ychange):
+        self.x += xchange
+        self.y += ychange
+        if(self.x + self.size >= UNIVERSE_WIDTH): self.x = UNIVERSE_WIDTH - self.size
+        if(self.x < 0): self.x = 0
+        if(self.y + self.size >= UNIVERSE_HEIGHT): self.y = UNIVERSE_HEIGHT - self.size
+        if(self.y < 0): self.y = 0  
+
+class animal(entity):
     targetx = 0
     targety = 0
-
-    max_energy = 10000
-    energy = 5000
-
-    energy_expenditure = 1
-
-    is_dead = False
     
-    def __init__(self, name, x, y):
+    def __init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure):
         self.targetx = x
         self.targety = y
-        print(name + ": I'm Alive!")
-        entity.__init__(self, "cubenoid", name, 2, (0,128,255), x, y)
+        entity.__init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure)
 
     def getNewTarget(self):
         self.targetx = randint(0, UNIVERSE_WIDTH - self.size)
         self.targety = randint(0, UNIVERSE_HEIGHT - self.size)
-    
+
     def eat(self, energy_value):
         self.energy += energy_value - self.energy_expenditure
 
+    def need_to_eat(self):
+        if(self.energy <= self.max_energy / 2):
+            return True
+        else:
+            return False
+
+    def want_to_eat(self):
+        if(self.need_to_eat()):
+            return 1
+        else:
+            return randint(0, 1)
+        
     def NeedToMove(self):
         if(self.energy <= self.max_energy / 2):
             return True
@@ -81,6 +99,16 @@ class cubeanoid(entity):
             return randint(0, 1)
         else:
             return int(self.NeedToMove())
+
+    def Wanna(self):
+        return randint(0, 1)
+
+#Double cell life, never grows but able to self-replicate
+class cubeanoid(animal):
+    
+    def __init__(self, name, x, y):
+        print(name + ": I'm Alive!")
+        animal.__init__(self, "cubenoid", name, 2, (0,128,255), x, y, 10000, 5000, 1)
 
     def move(self):
         if(self.energy >= self.max_energy):
@@ -115,18 +143,12 @@ class cubeanoid(entity):
 #Static, unmoving creature that absorbs any cubanoids stupid enough to crawl inside.
 #Will grow and shrink based on energy.
 class BigRed(entity):
-    max_energy = 20000
-    energy = 10000
     hunger = 10000
-    size = 10
-    energy_expenditure = 2
     eat_expenditure = 1
-
-    is_dead = False
 
     def __init__(self, name, x, y):
         print(name + ": I Live.")
-        entity.__init__(self, "cubenoid", name, self.size, (255,0,0), x, y)
+        entity.__init__(self, "bigred", name, 10, (255,0,0), x, y, 20000, 10000, 2)
 
     def need_to_eat(self):
         if(self.energy <= self.max_energy / 2):
@@ -158,71 +180,29 @@ class BigRed(entity):
         if(self.size <= 0 or self.energy <= 0):
             self.is_dead = True
 
-class elipsalottle(entity):
-    targetx = 0
-    targety = 0
-    
-    max_energy = 10000
-    energy = 5000
+class elipsalottle(animal):
     hunger = 5000
-    sizewidth = 20
-    sizelength = 20
-    energy_expenditure = 2
     eat_expenditure = 3
     field_of_vision = 1000
 
-    base_color = (255,255,0)
+    #base_color = (255,255,0)
 
     gender = "male"
-
-    is_dead = False
 
     def __init__(self, name, x, y):
         print(name + ": What am I?")
         self.gender = "male" if randint(0, 1) == 0 else "female"
+        base_color = (255,102,140)
         if(self.gender == "male"):
-            self.base_color = (255,255,0)
-        else:
-            self.base_color = (255,102,140)
-        entity.__init__(self, "elipsalottle", name, self.size, self.base_color, x, y)
-        
-    def getNewTarget(self):
-        self.targetx = randint(0, UNIVERSE_WIDTH - self.sizewidth)
-        self.targety = randint(0, UNIVERSE_HEIGHT - self.sizelength)
-        #print(self.name + " set new target to: " + str(self.targetx) + ", " + str(self.targety))
+            base_color = (255,255,0)
+
+        animal.__init__(self, "elipsalottle", name, 20, base_color, x, y, 10000, 5000, 2)
         
     def getFieldOfView(self):
         return pygame.Rect(self.x - 25, self.y - 25, 50, 50)
 
     def draw(self):
-        pygame.draw.ellipse(screen, self.color, pygame.Rect(self.x, self.y, self.sizewidth, self.sizelength))
-
-    def need_to_eat(self):
-        if(self.energy <= self.max_energy / 2):
-            return True
-        else:
-            return False
-
-    def NeedToMove(self):
-        if(self.energy <= self.max_energy / 2):
-            return True
-        else:
-            return False
-
-    def want_to_eat(self):
-        if(self.need_to_eat()):
-            return 1
-        else:
-            return randint(0, 1)
-        
-    def WantToMove(self):
-        if(self.energy > 1000):
-            return randint(0, 1)
-        else:
-            return int(self.NeedToMove())
-
-    def Wanna(self):
-        return randint(0, 1)
+        pygame.draw.ellipse(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
 
     def need_to_poo(self):
         if(self.energy - self.max_energy + (self.energy / 4) >= 100):
@@ -280,12 +260,6 @@ class elipsalottle(entity):
             if(self.need_to_eat() or self.want_to_eat() or self.Wanna()):
                self.targetx = big_red.x
                self.targety = big_red.y
-        
-class food(entity):
-    energy = 200
-    
-    def __init__(self, name, x, y):
-        entity.__init__(self, "food", name, 1, (0,255,0),  x, y)
     
 
 cubeanoids = [cubeanoid("Adam", 30, 30), cubeanoid("Eve", 100, 250)]
