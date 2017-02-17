@@ -238,8 +238,12 @@ class elipsalottle(animal):
     disposal = 0
     field_of_vision = 1000
     gender = "male"
-    max_size = 20
+    max_size = 15
     birth_limit = 5 #elipsalottles have a finite ability to reproduce. This limit is applied to both male and females.
+
+    tail_length = 20
+    tail_color_multiplier = 5
+    tails = []
 
     def __init__(self, name, x, y):
         print(name + ": What am I?")
@@ -247,12 +251,22 @@ class elipsalottle(animal):
         startsize = 5
         base_color = (255,255,0) if(self.gender == "male") else (255,102,140)
 
+        for i in range(1, self.tail_length):
+           color_offset = self.tail_color_multiplier * i;
+           tail_r = min(base_color[0]+color_offset, 255)
+           tail_g = min(base_color[1]+color_offset, 255)
+           tail_b = min(base_color[2]+color_offset, 255)
+           self.tails.append(base_object('tail', 'tail', self.size - 1, (tail_r, tail_g, tail_b), x, y))
+
         animal.__init__(self, "elipsalottle", name, 5, base_color, x, y, 10000, 5000, 2, 1)
         
     def getFieldOfView(self):
         return pygame.Rect(self.x - 25, self.y - 25, 50, 50)
 
     def draw(self):
+        for tail in self.tails:
+           pygame.draw.ellipse(screen, tail.color, pygame.Rect(tail.x, tail.y, self.size - 1, self.size - 1))
+           
         pygame.draw.ellipse(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
 
     def need_to_poo(self):
@@ -273,8 +287,8 @@ class elipsalottle(animal):
             self.energy += energy_value - self.eat_expenditure
             self.hunger -= energy_value / 2
             if(self.energy > self.max_energy):
-                if(self.size < 20):
-                    self.size += 5
+                if(self.size < self.max_size):
+                    self.size += 2
                 else:
                     self.is_adult = True
                 self.disposal = (self.energy - self.max_energy) / 200 # + (self.energy / 4)) / 200
@@ -293,6 +307,13 @@ class elipsalottle(animal):
         
         if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
             self.getNewTarget()
+
+        for i in reversed(range(1,len(self.tails))):
+           self.tails[i].x = self.tails[i-1].x
+           self.tails[i].y = self.tails[i-1].y
+            
+           self.tails[0].x = self.x
+           self.tails[0].y = self.y
 
         super(elipsalottle, self).move()
             
@@ -395,7 +416,7 @@ while not done:
     for p in particles:
         p.process()
         p.move()
-        p.draw()
+        #p.draw()
         
         for p2 in [x for x in particles if x != p and x.particle_type != p.particle_type]:
             if(p.CheckCollision(p2) > 0):
