@@ -17,6 +17,29 @@ done = False
 extinction_list = []
 clock = pygame.time.Clock()
 
+particles = []
+food_available = []
+cubeanoids = []
+big_reds = []
+elipsalottles = []
+
+particles_append = particles.append
+food_available_append = food_available.append
+cubeanoids_append = cubeanoids.append
+big_reds_append = big_reds.append
+elipsalottles_append = elipsalottles.append
+extinction_list_append = extinction_list.append
+
+particles_remove = particles.remove
+food_available_remove = food_available.remove
+cubeanoids_remove = cubeanoids.remove
+big_reds_remove = big_reds.remove
+elipsalottles_remove = elipsalottles.remove
+
+def DisposeToParticle(mass, x, y):
+    for i in range(mass):
+        particles_append(particle("particle" + str(len(particles)), x, y))
+
 class base_object(object):
     name = ''
     color = (0, 128, 255)
@@ -180,6 +203,8 @@ class cubeanoid(animal):
             
         elif(self.energy <= 0):
             self.is_dead = True
+            cubeanoids_remove(cn)
+            DisposeToParticle(cn.size, cn.x, cn.y)
             #print(self.name + " died. RIP.")
             return
         
@@ -235,6 +260,8 @@ class BigRed(entity):
 
         if(self.size <= 0 or self.energy <= 0):
             self.is_dead = True
+            big_reds_remove(bg)
+            DisposeToParticle(bg.size, bg.x, bg.y)
 
 #Slightly intelligent moving creature that eats BigReds.
 class elipsalottle(animal):
@@ -331,6 +358,8 @@ class elipsalottle(animal):
 
         if(self.energy <= 0):
             self.is_dead = True
+            elipsalottles_remove(el)
+            DisposeToParticle(el.size, el.x, el.y)
             #print(self.name + " died. RIP.")
             return
         
@@ -355,25 +384,6 @@ class elipsalottle(animal):
             self.color = (255,255,0)
 
         print(self.name + " has become a " + self.gender + ".")
-            
-particles = []
-food_available = []
-cubeanoids = []
-big_reds = []
-elipsalottles = []
-
-particles_append = particles.append
-food_available_append = food_available.append
-cubeanoids_append = cubeanoids.append
-big_reds_append = big_reds.append
-elipsalottles_append = elipsalottles.append
-extinction_list_append = extinction_list.append
-
-particles_remove = particles.remove
-food_available_remove = food_available.remove
-cubeanoids_remove = cubeanoids.remove
-big_reds_remove = big_reds.remove
-elipsalottles_remove = elipsalottles.remove
 
 def SpawnParticle():
     particles_append(particle("particle" + str(len(particles)), randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)))
@@ -412,10 +422,6 @@ def CheckExtinctions():
             print("Elipsalottle are extinct.")
             extinction_list_append("elipsalottle")
 
-def DisposeToParticle(mass, x, y):
-    for i in range(mass):
-        particles_append(particle("particle" + str(len(particles)), x, y))
-
 while not done:
     screen.fill((0, 0, 0))
     for event in pygame.event.get():
@@ -448,12 +454,7 @@ while not done:
                 #print("Problem removing particle")
                 pass
 
-    for cn in cubeanoids:
-        if(cn.is_dead):
-            cubeanoids_remove(cn)
-            DisposeToParticle(cn.size, cn.x, cn.y)
-            continue
-        
+    for cn in cubeanoids:        
         for f in [x for x in food_available if cn.CheckCollision(x)]:
             cn.eat(f.energy)
             food_available_remove(f)
@@ -464,12 +465,7 @@ while not done:
         cn.move()
         cn.draw()
 
-    for el in elipsalottles:
-        if(el.is_dead):
-            elipsalottles_remove(el)
-            DisposeToParticle(el.size, el.x, el.y)
-            continue
-        
+    for el in elipsalottles:       
         #Check if el can see a Big Red
         for bg in [x for x in big_reds if el.CheckFieldOfView(x)]:
             el.ChoseToGoToFood(bg)
@@ -504,12 +500,7 @@ while not done:
         el.move()
         el.draw()
 
-    for bg in big_reds:
-        if(bg.is_dead):
-            big_reds_remove(bg)
-            DisposeToParticle(bg.size, bg.x, bg.y)
-            continue
-        
+    for bg in big_reds:       
         if(bg.need_to_eat()):
             for cn in [x for x in cubeanoids if bg.CheckCollision(x) > 0]:
                 if(bg.CheckCollision(cn) > 0):
