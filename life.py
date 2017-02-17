@@ -204,7 +204,7 @@ class BigRed(entity):
 
     def __init__(self, name, x, y):
         #print(name + ": I Live.")
-        entity.__init__(self, "bigred", name, 10, (255,0,0), x, y, 100000, 50000, 2)
+        entity.__init__(self, "bigred", name, 3, (255,0,0), x, y, 100000, 50000, 2)
 
     def need_to_eat(self):
         if(self.energy <= self.max_energy / 2):
@@ -360,52 +360,61 @@ particles = []
 food_available = []
 cubeanoids = []
 big_reds = []
-elipsalottles = [] 
+elipsalottles = []
+
+particles_append = particles.append
+food_available_append = food_available.append
+cubeanoids_append = cubeanoids.append
+big_reds_append = big_reds.append
+elipsalottles_append = elipsalottles.append
+extinction_list_append = extinction_list.append
+
+particles_remove = particles.remove
+food_available_remove = food_available.remove
+cubeanoids_remove = cubeanoids.remove
+big_reds_remove = big_reds.remove
+elipsalottles_remove = elipsalottles.remove
 
 def SpawnParticle():
-    x = randint(0, UNIVERSE_WIDTH - 5)
-    y = randint(0, UNIVERSE_HEIGHT - 5)
-    particles.append(particle("particle" + str(len(particles)), x, y))
+    particles_append(particle("particle" + str(len(particles)), randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)))
+
+def SpawnParticles(amnt):
+    for i in range(amnt):
+        particles_append(particle("particle" + str(len(particles)), randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)))
 
 def SpawnFood():
-    x = randint(0, UNIVERSE_WIDTH - 5)
-    y = randint(0, UNIVERSE_HEIGHT - 5)
-    food_available.append(food("food" + str(len(food_available)), x, y))
+    food_available_append(food("food" + str(len(food_available)), randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)))
 
 def ScatterFood(amount, basex, basey):
     for i in range(amount):
         spread = 50
-        x = randint(basex - spread, basex + spread)
-        y = randint(basey - spread, basey + spread)
-        food_available.append(food("food" + str(len(food_available)), x, y))
+        food_available_append(food("food" + str(len(food_available)), randint(basex - spread, basex + spread), randint(basey - spread, basey + spread)))
 
 def DropBigRedSeed(droppername, x, y):
-    big_reds.append(BigRed("BigRed" + str(len(big_reds)), x, y))
+    big_reds_append(BigRed("BigRed" + str(len(big_reds)), x, y))
 
-#Randomly add some food to help the cubeanoids survive longer than a few minutes...
-for i in range(500):
-    #SpawnFood()
-    SpawnParticle()
+#Add particles to begin the cycle...
+SpawnParticles(500)
 
 def CheckExtinctions():
     if("cubenoid" not in extinction_list):
         if len(cubeanoids) == 0:
             print("Cubeanoids are extinct.")
-            extinction_list.append("cubenoid")
+            extinction_list_append("cubenoid")
             
     if("big_red" not in extinction_list):
         if len(big_reds) == 0:
             print("Big Reds are extinct.")
-            extinction_list.append("big_red")
+            extinction_list_append("big_red")
 
     if("elipsalottle" not in extinction_list):
         if len(elipsalottles) == 0:
             print("Elipsalottle are extinct.")
-            extinction_list.append("elipsalottle")
+            extinction_list_append("elipsalottle")
 
 def DisposeToParticle(mass, x, y):
     for i in range(mass):
-        particles.append(particle("particle" + str(len(particles)), x, y))
+        particles_append(particle("particle" + str(len(particles)), x, y))
 
 while not done:
     screen.fill((0, 0, 0))
@@ -419,39 +428,39 @@ while not done:
         p.process()
         p.move()
         #p.draw()
-        
+
         for p2 in [x for x in particles if x != p and x.particle_type != p.particle_type]:
             if(p.CheckCollision(p2) > 0):
                 #0-0 = nothing, 0-1 = cubanoid, 0-2 = food, 0-3 = Elipsalottle, 0-4 = Big Red
                 if(p.particle_type == 0 and p2.particle_type == 1):
-                    cubeanoids.append(cubeanoid("cubeanoid" + str(len(cubeanoids)), p.x, p.y))
+                    cubeanoids_append(cubeanoid("cubeanoid" + str(len(cubeanoids)), p.x, p.y))
                 elif(p.particle_type == 0 and p2.particle_type == 2):
-                    food_available.append(food("food" + str(len(food_available)), p.x, p.y))
+                    food_available_append(food("food" + str(len(food_available)), p.x, p.y))
                 elif(p.particle_type == 0 and p2.particle_type == 3):
-                    elipsalottles.append(elipsalottle("elipsalottle" + str(len(elipsalottles)), p.x, p.y))
+                    elipsalottles_append(elipsalottle("elipsalottle" + str(len(elipsalottles)), p.x, p.y))
                 elif(p.particle_type == 0 and p2.particle_type == 4):
-                    big_reds.append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
+                    big_reds_append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
                     
                 try:
-                    particles.remove(p)
-                    particles.remove(p2)
+                    particles_remove(p)
+                    particles_remove(p2)
                 except:
                     #sometimes particles can't be removed because at this point they are already gone.
                     #print("Problem removing particle")
                     pass
-        
+
     for cn in cubeanoids:
         for f in food_available:
             if(cn.CheckCollision(f) > 0):
                 cn.eat(f.energy)
-                food_available.remove(f)
+                food_available_remove(f)
 
         if(cn.is_dead):
-            cubeanoids.remove(cn)
+            cubeanoids_remove(cn)
             DisposeToParticle(cn.size, cn.x, cn.y)
         else:
             if(cn.CanSplit()):
-                cubeanoids.append(cubeanoid(str(cn.name) + str(len(cubeanoids)), cn.x + cn.size, cn.y + cn.size))
+                cubeanoids_append(cubeanoid(str(cn.name) + str(len(cubeanoids)), cn.x + cn.size, cn.y + cn.size))
                 cn.energy = cn.energy / 2
             cn.move()
             cn.draw()
@@ -482,7 +491,7 @@ while not done:
                        el.getNewTarget()
                 else:
                     if(el.want_to_mate() and el2.want_to_mate()):
-                        elipsalottles.append(elipsalottle(str(el.name) + str(len(cubeanoids)), el.x + el.size, el.y + el.size))
+                        elipsalottles_append(elipsalottle(str(el.name) + str(len(cubeanoids)), el.x + el.size, el.y + el.size))
                         el.mate()
                         el2.mate()
                         
@@ -492,7 +501,7 @@ while not done:
         
         el.process()
         if(el.is_dead):
-            elipsalottles.remove(el)
+            elipsalottles_remove(el)
             DisposeToParticle(el.size, el.x, el.y)
         else:
             el.move()
@@ -504,18 +513,18 @@ while not done:
                 if(bg.CheckCollision(cn) > 0):
                     bg.eat(cn.energy)
                     #print(cn.name + " was eaten by " + bg.name)
-                    cubeanoids.remove(cn)
+                    cubeanoids_remove(cn)
                     DisposeToParticle(cn.size, cn.x, cn.y)
 
-                for bg2 in [x for x in big_reds if x != bg]:
-                    if(bg.CheckCollision(bg2) > 0):
-                        #absorb the other big red
-                        bg.eat(bg2.energy)
-                        big_reds.remove(bg2)
+            for bg2 in [x for x in big_reds if x != bg]:
+                if(bg.CheckCollision(bg2) > 0):
+                    #absorb the other big red
+                    bg.eat(bg2.energy)
+                    big_reds_remove(bg2)
                         
         bg.process()
         if(bg.is_dead):
-            big_reds.remove(bg)
+            big_reds_remove(bg)
             DisposeToParticle(bg.size, bg.x, bg.y)
         else:
             bg.draw()
@@ -523,6 +532,5 @@ while not done:
     for f in food_available: f.draw()
 
     CheckExtinctions()
-    #SpawnFood()
     pygame.display.flip()
     clock.tick(60)
