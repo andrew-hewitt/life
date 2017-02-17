@@ -110,7 +110,7 @@ class animal(entity):
 
     def Wanna(self):
         if(self.current_attention_span == 0):
-            return bool(randint(0, 1))
+            return bool()
         else:
             return False
 
@@ -128,10 +128,10 @@ class animal(entity):
 
         #Check for freeze to ensure no one gets stuck
         if(self.x == movx and self.y == movy):
-            freeze_counter += 1
-            if(freeze_counter == 1000):
-                freeze_counter == 0
-                current_attention_span == 0
+            self.freeze_counter += 1
+            if(self.freeze_counter == 1000):
+                self.freeze_counter == 0
+                self.current_attention_span == 0
                 self.getNewTarget()
         self.x += movx
         self.y += movy
@@ -142,6 +142,23 @@ class animal(entity):
 
     def process(self):
         if(self.current_attention_span > 0): self.current_attention_span -= 1
+
+class particle(animal):
+    particle_type = 0
+    
+    def __init__(self, name, x, y):
+        self.particle_type = randint(0, 4)
+        animal.__init__(self, "particle", name, 1, (0,255,0), x, y, 1, 1, 0, 3)
+
+    def move(self):        
+        if(self.x == self.targetx and self.y == self.targety):
+            self.getNewTarget()
+
+        super(particle, self).move()
+
+    def process(self):
+        if(self.targetx == 0 and self.targety == 0): self.getNewTarget()
+        super(particle, self).process()
 
 #Double cell life, never grows but able to self-replicate
 class cubeanoid(animal):
@@ -222,6 +239,7 @@ class elipsalottle(animal):
     field_of_vision = 1000
     gender = "male"
     max_size = 20
+    birth_limit = 5 #elipsalottles have a finite ability to reproduce. This limit is applied to both male and females.
 
     def __init__(self, name, x, y):
         print(name + ": What am I?")
@@ -263,8 +281,10 @@ class elipsalottle(animal):
                 self.poo_timer = 1000
 
     def mate(self):
+        self.birth_limit -= 1
         self.energy -= self.mate_expenditure
         self.getNewTarget()
+        if(self.birth_limit == 0): self.is_dead = True #sorry....
         
     def move(self):
         if(self.targetx == 0 and self.targety == 0): return
@@ -310,17 +330,16 @@ class elipsalottle(animal):
 
         print(self.name + " has become a " + self.gender + ".")
             
-
-cubeanoids = [cubeanoid("Adam", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)),
-              cubeanoid("Eve", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)),
-              cubeanoid("Jeff", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)),
-              cubeanoid("Bob", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5))]
+particles = []
 food_available = []
-big_reds = [BigRed("BigRed1", randint(25, UNIVERSE_WIDTH - 25), randint(10, UNIVERSE_HEIGHT - 25)),
-            BigRed("BigRed2", randint(25, UNIVERSE_WIDTH - 25), randint(10, UNIVERSE_HEIGHT - 25)),
-            BigRed("BigRed3", randint(25, UNIVERSE_WIDTH - 25), randint(10, UNIVERSE_HEIGHT - 25)),
-            BigRed("BigRed4", randint(25, UNIVERSE_WIDTH - 25), randint(10, UNIVERSE_HEIGHT - 25))]
-elipsalottles = [elipsalottle("A", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)), elipsalottle("B", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)), elipsalottle("C", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)), elipsalottle("D", randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5))]
+cubeanoids = []
+big_reds = []
+elipsalottles = [] 
+
+def SpawnParticle():
+    x = randint(0, UNIVERSE_WIDTH - 5)
+    y = randint(0, UNIVERSE_HEIGHT - 5)
+    particles.append(particle("particle" + str(len(particles)), x, y))
 
 def SpawnFood():
     x = randint(0, UNIVERSE_WIDTH - 5)
@@ -335,10 +354,13 @@ def ScatterFood(amount, basex, basey):
         food_available.append(food("food" + str(len(food_available)), x, y))
 
 def DropBigRedSeed(droppername, x, y):
-    big_reds.append(BigRed(droppername + str(len(big_reds)), x, y))
+    big_reds.append(BigRed("BigRed" + str(len(big_reds)), x, y))
 
 #Randomly add some food to help the cubeanoids survive longer than a few minutes...
-for i in range(500): SpawnFood()
+for i in range(500):
+    #SpawnFood()
+    SpawnParticle()
+
 
 clock = pygame.time.Clock()
 
@@ -358,6 +380,10 @@ def CheckExtinctions():
             print("Elipsalottle are extinct.")
             extinction_list.append("elipsalottle")
 
+def DisposeToParticle(mass, x, y):
+    for i in range(mass):
+        particles.append(particle("particle" + str(len(particles)), x, y))
+
 while not done:
     screen.fill((0, 0, 0))
     for event in pygame.event.get():
@@ -366,6 +392,29 @@ while not done:
             pygame.quit()
             sys.exit()
 
+    for p in particles:
+        p.process()
+        p.move()
+        p.draw()
+        
+        for p2 in [x for x in particles if x != p and x.particle_type != p.particle_type]:
+            if(p.CheckCollision(p2) > 0):
+                #0-0 = nothing, 0-1 = cubanoid, 0-2 = food, 0-3 = Elipsalottle, 0-4 = Big Red
+                if(p.particle_type == 0 and p2.particle_type == 1):
+                    cubeanoids.append(cubeanoid("cubeanoid" + str(len(cubeanoids)), p.x, p.y))
+                elif(p.particle_type == 0 and p2.particle_type == 2):
+                    food_available.append(food("food" + str(len(food_available)), p.x, p.y))
+                elif(p.particle_type == 0 and p2.particle_type == 3):
+                    elipsalottles.append(elipsalottle("elipsalottle" + str(len(elipsalottles)), p.x, p.y))
+                elif(p.particle_type == 0 and p2.particle_type == 4):
+                    big_reds.append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
+                    
+                try:
+                    particles.remove(p)
+                    particles.remove(p2)
+                except:
+                    print("Problem removing particle")
+        
     for cn in cubeanoids:
         for f in food_available:
             if(cn.CheckCollision(f) > 0):
@@ -374,6 +423,7 @@ while not done:
 
         if(cn.is_dead):
             cubeanoids.remove(cn)
+            DisposeToParticle(2, cn.x, cn.y)
         else:
             if(cn.CanSplit()):
                 cubeanoids.append(cubeanoid(str(cn.name) + str(len(cubeanoids)), cn.x + cn.size, cn.y + cn.size))
@@ -418,6 +468,7 @@ while not done:
         el.process()
         if(el.is_dead):
             elipsalottles.remove(el)
+            DisposeToParticle(2, el.x, el.y)
         else:
             el.move()
             el.draw()
@@ -429,6 +480,7 @@ while not done:
                     bg.eat(cn.energy)
                     print(cn.name + " was eaten by " + bg.name)
                     cubeanoids.remove(cn)
+                    DisposeToParticle(2, cn.x, cn.y)
 
                 for bg2 in [x for x in big_reds if x != bg]:
                     if(bg.CheckCollision(bg2) > 0):
@@ -439,6 +491,7 @@ while not done:
         bg.process()
         if(bg.is_dead):
             big_reds.remove(bg)
+            DisposeToParticle(2, bg.x, bg.y)
         else:
             bg.draw()
 
