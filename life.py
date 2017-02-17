@@ -1,6 +1,7 @@
 import pygame
 import sys
 from random import randint
+from collections import deque
 
 pygame.init()
 UNIVERSE_WIDTH = 800
@@ -9,6 +10,7 @@ screen = pygame.display.set_mode((UNIVERSE_WIDTH, UNIVERSE_HEIGHT))
 pygame.display.set_caption('Microverse')
 done = False
 extinction_list = []
+clock = pygame.time.Clock()
 
 class base_object(object):
     name = ''
@@ -241,9 +243,8 @@ class elipsalottle(animal):
     max_size = 15
     birth_limit = 5 #elipsalottles have a finite ability to reproduce. This limit is applied to both male and females.
 
-    tail_length = 20
-    tail_color_multiplier = 5
-    tails = []
+    tail_length = 10
+    tail_update_timer = 0
 
     def __init__(self, name, x, y):
         print(name + ": What am I?")
@@ -251,12 +252,9 @@ class elipsalottle(animal):
         startsize = 5
         base_color = (255,255,0) if(self.gender == "male") else (255,102,140)
 
+        self.tails = deque()
         for i in range(1, self.tail_length):
-           color_offset = self.tail_color_multiplier * i;
-           tail_r = min(base_color[0]+color_offset, 255)
-           tail_g = min(base_color[1]+color_offset, 255)
-           tail_b = min(base_color[2]+color_offset, 255)
-           self.tails.append(base_object('tail', 'tail', self.size - 1, (tail_r, tail_g, tail_b), x, y))
+           self.tails.append(base_object('tail', 'tail', self.size, base_color, x, y))
 
         animal.__init__(self, "elipsalottle", name, 5, base_color, x, y, 10000, 5000, 2, 1)
         
@@ -265,7 +263,7 @@ class elipsalottle(animal):
 
     def draw(self):
         for tail in self.tails:
-           pygame.draw.ellipse(screen, tail.color, pygame.Rect(tail.x, tail.y, self.size - 1, self.size - 1))
+           pygame.draw.ellipse(screen, tail.color, pygame.Rect(tail.x, tail.y, self.size, self.size))
            
         pygame.draw.ellipse(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
 
@@ -288,7 +286,7 @@ class elipsalottle(animal):
             self.hunger -= energy_value / 2
             if(self.energy > self.max_energy):
                 if(self.size < self.max_size):
-                    self.size += 2
+                    self.size += 1
                 else:
                     self.is_adult = True
                 self.disposal = (self.energy - self.max_energy) / 200 # + (self.energy / 4)) / 200
@@ -308,18 +306,20 @@ class elipsalottle(animal):
         if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
             self.getNewTarget()
 
-        for i in reversed(range(1,len(self.tails))):
-           self.tails[i].x = self.tails[i-1].x
-           self.tails[i].y = self.tails[i-1].y
-            
+        if self.tail_update_timer == 0:
+           self.tails.rotate(1)
            self.tails[0].x = self.x
            self.tails[0].y = self.y
+           self.tail_update_timer = 3
 
         super(elipsalottle, self).move()
             
     def process(self):
         if(self.poo_timer > 0): self.poo_timer -= 1
+        if self.tail_update_timer > 0: self.tail_update_timer -= 1
+        
         self.poo()
+        
         if(self.energy > 0): self.energy -= self.energy_expenditure
         if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)):
            self.getNewTarget()
@@ -328,7 +328,7 @@ class elipsalottle(animal):
             self.is_dead = True
             print(self.name + " died. RIP.")
             return
-
+        
         super(elipsalottle, self).process()
 
     def CheckFieldOfView(self, oobj):
@@ -381,9 +381,6 @@ def DropBigRedSeed(droppername, x, y):
 for i in range(500):
     #SpawnFood()
     SpawnParticle()
-
-
-clock = pygame.time.Clock()
 
 def CheckExtinctions():
     if("cubenoid" not in extinction_list):
