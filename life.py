@@ -36,6 +36,9 @@ cubeanoids_remove = cubeanoids.remove
 big_reds_remove = big_reds.remove
 elipsalottles_remove = elipsalottles.remove
 
+pg_draw_elipse = pygame.draw.ellipse
+pg_draw__rect = pygame.draw.rect
+
 def DisposeToParticle(mass, x, y):
     for i in range(mass):
         particles_append(particle("particle" + str(len(particles)), x, y))
@@ -56,7 +59,7 @@ class base_object(object):
         self.color = color
 
     def draw(self):
-        pygame.draw.rect(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
+        pg_draw__rect(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
 
     def getRect(self):
         rectsize = self.size if self.size >= 3 else 3
@@ -106,10 +109,7 @@ class animal(entity):
         self.energy += energy_value - self.energy_expenditure
 
     def need_to_eat(self):
-        if(self.energy <= self.max_energy): # / 2):
-            return True
-        else:
-            return False
+        return self.energy <= self.max_energy
 
     def want_to_mate(self):
         if(self.energy >= self.max_energy / 2 and self.is_adult):
@@ -127,10 +127,7 @@ class animal(entity):
                 return False
         
     def NeedToMove(self):
-        if(self.energy <= self.max_energy / 2):
-            return True
-        else:
-            return False
+        return self.energy <= self.max_energy / 2
 
     def WantToMove(self):
         if(self.energy > 1000):
@@ -181,9 +178,7 @@ class particle(animal):
         animal.__init__(self, "particle", name, 1, (0,255,0), x, y, 1, 1, 0, 3)
 
     def move(self):        
-        if(self.x == self.targetx and self.y == self.targety):
-            self.getNewTarget()
-
+        if(self.x == self.targetx and self.y == self.targety): self.getNewTarget()
         super(particle, self).move()
 
     def process(self):
@@ -198,8 +193,7 @@ class cubeanoid(animal):
         animal.__init__(self, "cubenoid", name, 2, (0,128,255), x, y, 10000, 5000, 1, 3)
 
     def move(self):
-        if(self.energy >= self.max_energy):
-            self.energy -= self.energy_expenditure
+        if(self.energy >= self.max_energy): self.energy -= self.energy_expenditure
             
         elif(self.energy <= 0):
             self.is_dead = True
@@ -208,8 +202,7 @@ class cubeanoid(animal):
             #print(self.name + " died. RIP.")
             return
         
-        if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
-            self.getNewTarget()
+        if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())): self.getNewTarget()
 
         super(cubeanoid, self).move()
 
@@ -217,8 +210,7 @@ class cubeanoid(animal):
         return self.energy >= self.max_energy - 1000
 
     def process(self):
-        if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)):
-           self.getNewTarget()
+        if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)): self.getNewTarget()
         super(cubeanoid, self).process()
 
 #Static, unmoving creature that absorbs any cubanoids stupid enough to crawl inside.
@@ -232,10 +224,7 @@ class BigRed(entity):
         entity.__init__(self, "bigred", name, 3, (255,0,0), x, y, 100000, 50000, 2)
 
     def need_to_eat(self):
-        if(self.energy <= self.max_energy / 2):
-            return True
-        else:
-            return False
+        return self.energy <= self.max_energy / 2
     
     def eat(self, energy_value):         
         self.energy += (energy_value / 2) - self.eat_expenditure
@@ -243,8 +232,6 @@ class BigRed(entity):
         self.hunger -= energy_value / 2
         self.x -= 1
         self.y -= 1
-        if(self.energy >= self.max_energy):
-            pass #marker for something to happen at full energy.
             
     def process(self):
         self.energy -= self.energy_expenditure
@@ -285,8 +272,9 @@ class elipsalottle(animal):
         base_color = (255,255,0) if(self.gender == "male") else (255,102,140)
 
         self.tails = deque()
+        append_tails = self.tails.append
         for i in range(1, self.tail_length):
-           self.tails.append(base_object('tail', 'tail', self.size, base_color, x, y))
+           append_tails(base_object('tail', 'tail', self.size, base_color, x, y))
 
         animal.__init__(self, "elipsalottle", name, 5, base_color, x, y, 10000, 5000, 2, 1)
         
@@ -295,15 +283,12 @@ class elipsalottle(animal):
 
     def draw(self):
         for tail in self.tails:
-           pygame.draw.ellipse(screen, tail.color, pygame.Rect(tail.x, tail.y, self.size, self.size))
+           pg_draw_elipse(screen, tail.color, pygame.Rect(tail.x, tail.y, self.size, self.size))
            
-        pygame.draw.ellipse(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
+        pg_draw_elipse(screen, self.color, pygame.Rect(self.x, self.y, self.size, self.size))
 
     def need_to_poo(self):
-        if(self.disposal > 0):
-            return True
-        else:
-            return False
+        return self.disposal > 0
 
     def poo(self):
         if(self.poo_timer == 0 and self.need_to_poo()):
@@ -332,11 +317,8 @@ class elipsalottle(animal):
         
     def move(self):
         if(self.targetx == 0 and self.targety == 0): return
-        if(self.energy >= self.max_energy):
-            self.energy -= self.energy_expenditure
-        
-        if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
-            self.getNewTarget()
+        if(self.energy >= self.max_energy): self.energy -= self.energy_expenditure
+        if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())): self.getNewTarget()
 
         if self.tail_update_timer == 0:
            self.tails.rotate(1)
@@ -348,13 +330,12 @@ class elipsalottle(animal):
             
     def process(self):
         if(self.poo_timer > 0): self.poo_timer -= 1
-        if self.tail_update_timer > 0: self.tail_update_timer -= 1
+        if(self.tail_update_timer > 0): self.tail_update_timer -= 1
         
         self.poo()
         
         if(self.energy > 0): self.energy -= self.energy_expenditure
-        if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)):
-           self.getNewTarget()
+        if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)): self.getNewTarget()
 
         if(self.energy <= 0):
             self.is_dead = True
