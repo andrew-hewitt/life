@@ -429,58 +429,60 @@ while not done:
         p.move()
         #p.draw()
 
-        for p2 in [x for x in particles if x != p and x.particle_type != p.particle_type]:
-            if(p.CheckCollision(p2) > 0):
-                #0-0 = nothing, 0-1 = cubanoid, 0-2 = food, 0-3 = Elipsalottle, 0-4 = Big Red
-                if(p.particle_type == 0 and p2.particle_type == 1):
-                    cubeanoids_append(cubeanoid("cubeanoid" + str(len(cubeanoids)), p.x, p.y))
-                elif(p.particle_type == 0 and p2.particle_type == 2):
-                    food_available_append(food("food" + str(len(food_available)), p.x, p.y))
-                elif(p.particle_type == 0 and p2.particle_type == 3):
-                    elipsalottles_append(elipsalottle("elipsalottle" + str(len(elipsalottles)), p.x, p.y))
-                elif(p.particle_type == 0 and p2.particle_type == 4):
-                    big_reds_append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
-                    
-                try:
-                    particles_remove(p)
-                    particles_remove(p2)
-                except:
-                    #sometimes particles can't be removed because at this point they are already gone.
-                    #print("Problem removing particle")
-                    pass
+        for p2 in [x for x in particles if x != p and x.particle_type != p.particle_type and p.CheckCollision(x)]:
+            #0-0 = nothing, 0-1 = cubanoid, 0-2 = food, 0-3 = Elipsalottle, 0-4 = Big Red
+            if(p.particle_type == 0 and p2.particle_type == 1):
+                cubeanoids_append(cubeanoid("cubeanoid" + str(len(cubeanoids)), p.x, p.y))
+            elif(p.particle_type == 0 and p2.particle_type == 2):
+                food_available_append(food("food" + str(len(food_available)), p.x, p.y))
+            elif(p.particle_type == 0 and p2.particle_type == 3):
+                elipsalottles_append(elipsalottle("elipsalottle" + str(len(elipsalottles)), p.x, p.y))
+            elif(p.particle_type == 0 and p2.particle_type == 4):
+                big_reds_append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
+                
+            try:
+                particles_remove(p)
+                particles_remove(p2)
+            except:
+                #sometimes particles can't be removed because at this point they are already gone.
+                #print("Problem removing particle")
+                pass
 
     for cn in cubeanoids:
-        for f in food_available:
-            if(cn.CheckCollision(f) > 0):
-                cn.eat(f.energy)
-                food_available_remove(f)
-
         if(cn.is_dead):
             cubeanoids_remove(cn)
             DisposeToParticle(cn.size, cn.x, cn.y)
-        else:
-            if(cn.CanSplit()):
-                cubeanoids_append(cubeanoid(str(cn.name) + str(len(cubeanoids)), cn.x + cn.size, cn.y + cn.size))
-                cn.energy = cn.energy / 2
-            cn.move()
-            cn.draw()
+            continue
+        
+        for f in [x for x in food_available if cn.CheckCollision(x)]:
+            cn.eat(f.energy)
+            food_available_remove(f)
+
+        if(cn.CanSplit()):
+            cubeanoids_append(cubeanoid(str(cn.name) + str(len(cubeanoids)), cn.x + cn.size, cn.y + cn.size))
+            cn.energy = cn.energy / 2
+        cn.move()
+        cn.draw()
 
     for el in elipsalottles:
+        if(el.is_dead):
+            elipsalottles_remove(el)
+            DisposeToParticle(el.size, el.x, el.y)
+            continue
+        
         #Check if el can see a Big Red
-        for bg in big_reds:
-            if(el.CheckFieldOfView(bg) > 0):
-                el.ChoseToGoToFood(bg)
-                    
-            if(el.CheckCollision(bg) > 0):                    
-                if(el.need_to_eat() or el.want_to_eat()):
-                    energytaken = 5000
-                    el.eat(energytaken)
-                    if(bg.energy > 0): bg.energy -= energytaken
-                    
+        for bg in [x for x in big_reds if el.CheckFieldOfView(x)]:
+            el.ChoseToGoToFood(bg)
+
+            if(el.CheckCollision(bg) > 0 and (el.need_to_eat() or el.want_to_eat())):                    
+                energytaken = 5000
+                el.eat(energytaken)
+                if(bg.energy > 0): bg.energy -= energytaken
+
         if(el.want_to_mate() and len([x for x in elipsalottles if x.gender != el.gender]) == -1):
             el.switch_gender()
 
-        for el2 in [x for x in elipsalottles if x != el]: #elipsalottles:
+        for el2 in [x for x in elipsalottles if x != el and el.CheckFieldOfView(x)]: #elipsalottles:
             if(el.CheckCollision(el2)):
                 if(el.gender == el2.gender and (el.is_adult and el2.is_adult)):
                     if(bool(randint(0, 1))):
@@ -494,40 +496,35 @@ while not done:
                         elipsalottles_append(elipsalottle(str(el.name) + str(len(cubeanoids)), el.x + el.size, el.y + el.size))
                         el.mate()
                         el2.mate()
-                        
-            elif(el.CheckFieldOfView(el2) > 0 and el.want_to_mate() and el2.is_adult and el.gender != el2.gender):
+            elif(el.want_to_mate() and el2.is_adult and el.gender != el2.gender):
                 el.targetx = el2.targetx
                 el.targety = el2.targety
         
         el.process()
-        if(el.is_dead):
-            elipsalottles_remove(el)
-            DisposeToParticle(el.size, el.x, el.y)
-        else:
-            el.move()
-            el.draw()
+        el.move()
+        el.draw()
 
     for bg in big_reds:
+        if(bg.is_dead):
+            big_reds_remove(bg)
+            DisposeToParticle(bg.size, bg.x, bg.y)
+            continue
+        
         if(bg.need_to_eat()):
-            for cn in cubeanoids:
+            for cn in [x for x in cubeanoids if bg.CheckCollision(x) > 0]:
                 if(bg.CheckCollision(cn) > 0):
                     bg.eat(cn.energy)
                     #print(cn.name + " was eaten by " + bg.name)
                     cubeanoids_remove(cn)
                     DisposeToParticle(cn.size, cn.x, cn.y)
 
-            for bg2 in [x for x in big_reds if x != bg]:
-                if(bg.CheckCollision(bg2) > 0):
-                    #absorb the other big red
-                    bg.eat(bg2.energy)
-                    big_reds_remove(bg2)
+            for bg2 in [x for x in big_reds if x != bg and bg.CheckCollision(x)]:
+                #absorb the other big red
+                bg.eat(bg2.energy)
+                big_reds_remove(bg2)
                         
         bg.process()
-        if(bg.is_dead):
-            big_reds_remove(bg)
-            DisposeToParticle(bg.size, bg.x, bg.y)
-        else:
-            bg.draw()
+        bg.draw()
 
     for f in food_available: f.draw()
 
