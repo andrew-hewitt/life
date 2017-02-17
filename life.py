@@ -14,9 +14,9 @@ screen.set_alpha(None) #Alpha isnt really needed yet.
 
 pygame.display.set_caption('Microverse')
 done = False
-extinction_list = []
 clock = pygame.time.Clock()
 
+extinction_list = []
 particles = []
 food_available = []
 cubeanoids = []
@@ -478,9 +478,9 @@ while not done:
         if(el.want_to_mate() and len([x for x in elipsalottles if x.gender != el.gender]) == -1):
             el.switch_gender()
 
-        for el2 in [x for x in elipsalottles if x != el and el.CheckFieldOfView(x)]: #elipsalottles:
+        for el2 in [x for x in elipsalottles if x != el and el.CheckFieldOfView(x) and x.is_adult]: #elipsalottles:
             if(el.CheckCollision(el2)):
-                if(el.gender == el2.gender and (el.is_adult and el2.is_adult)):
+                if(el.gender == el2.gender and el.is_adult):
                     if(bool(randint(0, 1))):
                        el2.energy -= 5
                        el2.getNewTarget()
@@ -492,7 +492,7 @@ while not done:
                         elipsalottles_append(elipsalottle(str(el.name) + str(len(cubeanoids)), el.x + el.size, el.y + el.size))
                         el.mate()
                         el2.mate()
-            elif(el.want_to_mate() and el2.is_adult and el.gender != el2.gender):
+            elif(el.want_to_mate() and el.gender != el2.gender):
                 el.targetx = el2.targetx
                 el.targety = el2.targety
         
@@ -503,11 +503,10 @@ while not done:
     for bg in big_reds:       
         if(bg.need_to_eat()):
             for cn in [x for x in cubeanoids if bg.CheckCollision(x) > 0]:
-                if(bg.CheckCollision(cn) > 0):
-                    bg.eat(cn.energy)
-                    #print(cn.name + " was eaten by " + bg.name)
-                    cubeanoids_remove(cn)
-                    DisposeToParticle(cn.size, cn.x, cn.y)
+                bg.eat(cn.energy)
+                #print(cn.name + " was eaten by " + bg.name)
+                cubeanoids_remove(cn)
+                DisposeToParticle(cn.size, cn.x, cn.y)
 
             for bg2 in [x for x in big_reds if x != bg and bg.CheckCollision(x)]:
                 #absorb the other big red
