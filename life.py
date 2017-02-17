@@ -1,12 +1,17 @@
 import pygame
 import sys
+from pygame.locals import *
 from random import randint
 from collections import deque
 
 pygame.init()
+pygame.event.set_allowed([QUIT])
 UNIVERSE_WIDTH = 800
 UNIVERSE_HEIGHT = 600
-screen = pygame.display.set_mode((UNIVERSE_WIDTH, UNIVERSE_HEIGHT))
+flags = DOUBLEBUF | HWACCEL
+screen = pygame.display.set_mode((UNIVERSE_WIDTH, UNIVERSE_HEIGHT), flags)
+screen.set_alpha(None) #Alpha isnt really needed yet.
+
 pygame.display.set_caption('Microverse')
 done = False
 extinction_list = []
@@ -166,7 +171,7 @@ class particle(animal):
 class cubeanoid(animal):
     
     def __init__(self, name, x, y):
-        print(name + ": I'm Alive!")
+        #print(name + ": I'm Alive!")
         animal.__init__(self, "cubenoid", name, 2, (0,128,255), x, y, 10000, 5000, 1, 3)
 
     def move(self):
@@ -175,7 +180,7 @@ class cubeanoid(animal):
             
         elif(self.energy <= 0):
             self.is_dead = True
-            print(self.name + " died. RIP.")
+            #print(self.name + " died. RIP.")
             return
         
         if(self.x == self.targetx and self.y == self.targety and (self.NeedToMove() or self.WantToMove())):
@@ -198,7 +203,7 @@ class BigRed(entity):
     eat_expenditure = 1
 
     def __init__(self, name, x, y):
-        print(name + ": I Live.")
+        #print(name + ": I Live.")
         entity.__init__(self, "bigred", name, 10, (255,0,0), x, y, 100000, 50000, 2)
 
     def need_to_eat(self):
@@ -247,7 +252,7 @@ class elipsalottle(animal):
     tail_update_timer = 0
 
     def __init__(self, name, x, y):
-        print(name + ": What am I?")
+        #print(name + ": What am I?")
         self.gender = "male" if randint(0, 1) == 0 else "female"
         startsize = 5
         base_color = (255,255,0) if(self.gender == "male") else (255,102,140)
@@ -326,7 +331,7 @@ class elipsalottle(animal):
 
         if(self.energy <= 0):
             self.is_dead = True
-            print(self.name + " died. RIP.")
+            #print(self.name + " died. RIP.")
             return
         
         super(elipsalottle, self).process()
@@ -431,7 +436,9 @@ while not done:
                     particles.remove(p)
                     particles.remove(p2)
                 except:
-                    print("Problem removing particle")
+                    #sometimes particles can't be removed because at this point they are already gone.
+                    #print("Problem removing particle")
+                    pass
         
     for cn in cubeanoids:
         for f in food_available:
@@ -441,7 +448,7 @@ while not done:
 
         if(cn.is_dead):
             cubeanoids.remove(cn)
-            DisposeToParticle(2, cn.x, cn.y)
+            DisposeToParticle(cn.size, cn.x, cn.y)
         else:
             if(cn.CanSplit()):
                 cubeanoids.append(cubeanoid(str(cn.name) + str(len(cubeanoids)), cn.x + cn.size, cn.y + cn.size))
@@ -486,7 +493,7 @@ while not done:
         el.process()
         if(el.is_dead):
             elipsalottles.remove(el)
-            DisposeToParticle(2, el.x, el.y)
+            DisposeToParticle(el.size, el.x, el.y)
         else:
             el.move()
             el.draw()
@@ -496,9 +503,9 @@ while not done:
             for cn in cubeanoids:
                 if(bg.CheckCollision(cn) > 0):
                     bg.eat(cn.energy)
-                    print(cn.name + " was eaten by " + bg.name)
+                    #print(cn.name + " was eaten by " + bg.name)
                     cubeanoids.remove(cn)
-                    DisposeToParticle(2, cn.x, cn.y)
+                    DisposeToParticle(cn.size, cn.x, cn.y)
 
                 for bg2 in [x for x in big_reds if x != bg]:
                     if(bg.CheckCollision(bg2) > 0):
@@ -509,7 +516,7 @@ while not done:
         bg.process()
         if(bg.is_dead):
             big_reds.remove(bg)
-            DisposeToParticle(2, bg.x, bg.y)
+            DisposeToParticle(bg.size, bg.x, bg.y)
         else:
             bg.draw()
 
