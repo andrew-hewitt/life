@@ -73,7 +73,10 @@ class base_object(object):
 class food(base_object):
     energy = 200    
     def __init__(self, name, x, y):
-        base_object.__init__(self, "food", name, 1, (0,255,0), x, y)
+        rgb_r = particle_type_data[0]['color'][0] if  particle_type_data[0]['r_str'] > particle_type_data[2]['r_str'] else particle_type_data[2]['color'][0]
+        rgb_g = particle_type_data[0]['color'][1] if  particle_type_data[0]['g_str'] > particle_type_data[2]['g_str'] else particle_type_data[2]['color'][1]
+        rgb_b = particle_type_data[0]['color'][2] if  particle_type_data[0]['b_str'] > particle_type_data[2]['b_str'] else particle_type_data[2]['color'][2]
+        base_object.__init__(self, "food", name, 1, (rgb_r,rgb_g,rgb_b), x, y)
         
 class entity(base_object):
     is_dead = False
@@ -139,7 +142,7 @@ class animal(entity):
 
     def Wanna(self):
         if(self.current_attention_span == 0):
-            return bool()
+            return bool(rnd.randint(0, 2))
         else:
             return False
 
@@ -172,12 +175,15 @@ class animal(entity):
     def process(self):
         if(self.current_attention_span > 0): self.current_attention_span -= 1
 
+particle_type_data = {}
 class particle(animal):
     particle_type = 0
     
     def __init__(self, name, x, y):
         self.particle_type = rnd.randint(0, 5)
-        animal.__init__(self, "particle", name, 1, (0,255,0), x, y, 1, 1, 0, 3)
+        if(self.particle_type not in particle_type_data):
+            particle_type_data[self.particle_type] = {'color': (rnd.randint(0, 256),rnd.randint(0, 256),rnd.randint(0, 256)), 'r_str': rnd.randint(0,100), 'g_str': rnd.randint(0,100), 'b_str': rnd.randint(0,100)}
+        animal.__init__(self, "particle", name, 1, particle_type_data[self.particle_type]['color'], x, y, 1, 1, 0, 3)
         
     def move(self):        
         if(self.x == self.targetx and self.y == self.targety): self.getNewTarget()
@@ -192,7 +198,10 @@ class cubeanoid(animal):
     
     def __init__(self, name, x, y):
         #print(name + ": I'm Alive!")
-        animal.__init__(self, "cubenoid", name, 2, (0,128,255), x, y, 10000, 5000, 1, 3)
+        rgb_r = particle_type_data[0]['color'][0] if  particle_type_data[0]['r_str'] > particle_type_data[1]['r_str'] else particle_type_data[1]['color'][0]
+        rgb_g = particle_type_data[0]['color'][1] if  particle_type_data[0]['g_str'] > particle_type_data[1]['g_str'] else particle_type_data[1]['color'][1]
+        rgb_b = particle_type_data[0]['color'][2] if  particle_type_data[0]['b_str'] > particle_type_data[1]['b_str'] else particle_type_data[1]['color'][2]
+        animal.__init__(self, "cubenoid", name, 2, (rgb_r,rgb_g,rgb_b), x, y, 10000, 5000, 1, 3)
 
     def move(self):
         if(self.energy >= self.max_energy): self.energy -= self.energy_expenditure
@@ -223,7 +232,10 @@ class BigRed(entity):
 
     def __init__(self, name, x, y):
         #print(name + ": I Live.")
-        entity.__init__(self, "bigred", name, 3, (255,0,0), x, y, 100000, 50000, 2)
+        rgb_r = particle_type_data[0]['color'][0] if  particle_type_data[0]['r_str'] > particle_type_data[4]['r_str'] else particle_type_data[4]['color'][0]
+        rgb_g = particle_type_data[0]['color'][1] if  particle_type_data[0]['g_str'] > particle_type_data[4]['g_str'] else particle_type_data[4]['color'][1]
+        rgb_b = particle_type_data[0]['color'][2] if  particle_type_data[0]['b_str'] > particle_type_data[4]['b_str'] else particle_type_data[4]['color'][2]
+        entity.__init__(self, "bigred", name, 3, (rgb_r,rgb_g,rgb_b), x, y, 100000, 50000, 2)
 
     def need_to_eat(self):
         return self.energy <= np.divide(self.max_energy, 2)
@@ -270,7 +282,7 @@ class elipsalottle(animal):
     def __init__(self, name, x, y):
         #print(name + ": What am I?")
         self.gender = "male" if rnd.randint(0, 2) == 0 else "female"
-        base_color = (255,255,0) if(self.gender == "male") else (255,102,140)
+        base_color = particle_type_data[0]['color'] if(self.gender == "male") else particle_type_data[3]['color']
 
         self.tails = deque()
         append_tails = self.tails.append
