@@ -1,7 +1,8 @@
 import pygame
 import sys
+import numpy as np
+from numpy import random as rnd
 from pygame.locals import *
-from random import randint
 from collections import deque
 
 pygame.init()
@@ -13,8 +14,9 @@ screen = pygame.display.set_mode((UNIVERSE_WIDTH, UNIVERSE_HEIGHT), flags)
 screen.set_alpha(None) #Alpha isnt really needed yet.
 
 pygame.display.set_caption('Microverse')
-done = False
 clock = pygame.time.Clock()
+
+done = False
 
 extinction_list = []
 particles = []
@@ -102,18 +104,18 @@ class animal(entity):
         entity.__init__(self, objtype, name, size, color, x, y, max_energy, start_energy, living_energy_expenditure)
 
     def getNewTarget(self):
-        self.targetx = randint(0, UNIVERSE_WIDTH - self.size)
-        self.targety = randint(0, UNIVERSE_HEIGHT - self.size)
+        self.targetx = rnd.randint(0, np.subtract(UNIVERSE_WIDTH, self.size))
+        self.targety = rnd.randint(0, np.subtract(UNIVERSE_HEIGHT, self.size))
 
     def eat(self, energy_value):
-        self.energy += energy_value - self.energy_expenditure
+        self.energy += np.subtract(energy_value, self.energy_expenditure)
 
     def need_to_eat(self):
         return self.energy <= self.max_energy
 
     def want_to_mate(self):
-        if(self.energy >= self.max_energy / 2 and self.is_adult):
-            return bool(randint(0, 1))
+        if(self.energy >= np.divide(self.max_energy, 2) and self.is_adult):
+            return bool(rnd.randint(0, 2))
         else:
             return False
 
@@ -122,16 +124,16 @@ class animal(entity):
             return True
         else:
             if(self.current_attention_span == 0):
-                return bool(randint(0, 1))
+                return bool(rnd.randint(0, 2))
             else:
                 return False
         
     def NeedToMove(self):
-        return self.energy <= self.max_energy / 2
+        return self.energy <= np.divide(self.max_energy, 2)
 
     def WantToMove(self):
         if(self.energy > 1000):
-            return bool(randint(0, 1))
+            return bool(rnd.randint(0, 2))
         else:
             return self.NeedToMove()
 
@@ -144,14 +146,14 @@ class animal(entity):
     def move(self):
         movx = 0
         movy = 0
-        difx = self.targetx - self.x
-        dify = self.targety - self.y
-        if(self.targetx < self.x): movx = -self.velocity if difx < -self.velocity - 1 else difx
-        if(self.targetx > self.x): movx = self.velocity if difx > self.velocity - 1 else difx
-        if(self.targety < self.y): movy = -self.velocity if dify < -self.velocity - 1 else dify
-        if(self.targety > self.y): movy = self.velocity if dify > self.velocity - 1 else dify
+        difx = np.subtract(self.targetx, self.x)
+        dify = np.subtract(self.targety, self.y)
+        if(self.targetx < self.x): movx = -self.velocity if difx < np.subtract(-self.velocity, 1) else difx
+        if(self.targetx > self.x): movx = self.velocity if difx > np.subtract(self.velocity, 1) else difx
+        if(self.targety < self.y): movy = -self.velocity if dify < np.subtract(-self.velocity, 1) else dify
+        if(self.targety > self.y): movy = self.velocity if dify > np.subtract(self.velocity, 1) else dify
         expval = movx if movx > movy else movy
-        self.energy -= self.energy_expenditure * expval
+        self.energy -= np.multiply(self.energy_expenditure, expval)
 
         #Check for freeze to ensure no one gets stuck
         if(self.x == movx and self.y == movy):
@@ -162,9 +164,9 @@ class animal(entity):
                 self.getNewTarget()
         self.x += movx
         self.y += movy
-        if(self.x + self.size >= UNIVERSE_WIDTH): self.x = UNIVERSE_WIDTH - self.size
+        if(self.x + self.size >= UNIVERSE_WIDTH): self.x = np.subtract(UNIVERSE_WIDTH, self.size)
         if(self.x < 0): self.x = 0
-        if(self.y + self.size >= UNIVERSE_HEIGHT): self.y = UNIVERSE_HEIGHT - self.size
+        if(self.y + self.size >= UNIVERSE_HEIGHT): self.y = np.subtract(UNIVERSE_HEIGHT, self.size)
         if(self.y < 0): self.y = 0
 
     def process(self):
@@ -174,9 +176,9 @@ class particle(animal):
     particle_type = 0
     
     def __init__(self, name, x, y):
-        self.particle_type = randint(0, 4)
+        self.particle_type = rnd.randint(0, 5)
         animal.__init__(self, "particle", name, 1, (0,255,0), x, y, 1, 1, 0, 3)
-
+        
     def move(self):        
         if(self.x == self.targetx and self.y == self.targety): self.getNewTarget()
         super(particle, self).move()
@@ -207,7 +209,7 @@ class cubeanoid(animal):
         super(cubeanoid, self).move()
 
     def CanSplit(self):
-        return self.energy >= self.max_energy - 1000
+        return self.energy >= np.subtract(self.max_energy, 1000)
 
     def process(self):
         if((self.WantToMove() or self.NeedToMove()) and (self.targetx == 0 and self.targety == 0)): self.getNewTarget()
@@ -224,15 +226,15 @@ class BigRed(entity):
         entity.__init__(self, "bigred", name, 3, (255,0,0), x, y, 100000, 50000, 2)
 
     def need_to_eat(self):
-        return self.energy <= self.max_energy / 2
+        return self.energy <= np.divide(self.max_energy, 2)
     
     def eat(self, energy_value):         
-        self.energy += (energy_value / 2) - self.eat_expenditure
+        self.energy += np.subtract(np.divide(energy_value, 2), self.eat_expenditure)
         self.size += 2
-        self.hunger -= energy_value / 2
+        self.hunger -= np.divide(energy_value, 2)
         self.x -= 1
         self.y -= 1
-            
+         
     def process(self):
         self.energy -= self.energy_expenditure
         self.hunger += 1
@@ -241,7 +243,7 @@ class BigRed(entity):
             if(self.size > 0): self.size -= 2
             if(self.size > 0):
                 self.hunger -= 1
-                self.energy += self.energy / self.size / 2
+                self.energy += np.divide(np.divide(self.energy, self.size), 2)
                 self.x += 1
                 self.y += 1
 
@@ -267,8 +269,7 @@ class elipsalottle(animal):
 
     def __init__(self, name, x, y):
         #print(name + ": What am I?")
-        self.gender = "male" if randint(0, 1) == 0 else "female"
-        startsize = 5
+        self.gender = "male" if rnd.randint(0, 2) == 0 else "female"
         base_color = (255,255,0) if(self.gender == "male") else (255,102,140)
 
         self.tails = deque()
@@ -279,7 +280,7 @@ class elipsalottle(animal):
         animal.__init__(self, "elipsalottle", name, 5, base_color, x, y, 10000, 5000, 2, 1)
         
     def getFieldOfView(self):
-        return pygame.Rect(self.x - 25, self.y - 25, 50, 50)
+        return pygame.Rect(np.subtract(self.x, 25), np.subtract(self.y, 25), 50, 50)
 
     def draw(self):
         for tail in self.tails:
@@ -294,19 +295,19 @@ class elipsalottle(animal):
         if(self.poo_timer == 0 and self.need_to_poo()):
             self.energy = self.max_energy
             ScatterFood(int(self.disposal), self.x, self.y)
-            if(bool(randint(0, 1))): DropBigRedSeed(self.name, self.x, self.y)
+            if(bool(rnd.randint(0, 2))): DropBigRedSeed(self.name, self.x, self.y)
             self.disposal = 0
-        
+
     def eat(self, energy_value):
         if(energy_value > 0):
-            self.energy += energy_value - self.eat_expenditure
+            self.energy += np.subtract(energy_value, self.eat_expenditure)
             self.hunger -= energy_value / 2
             if(self.energy > self.max_energy):
                 if(self.size < self.max_size):
                     self.size += 1
                 else:
                     self.is_adult = True
-                self.disposal = (self.energy - self.max_energy) / 200 # + (self.energy / 4)) / 200
+                self.disposal = np.divide((np.subtract(self.energy, self.max_energy)), 200) # + (self.energy / 4)) / 200
                 self.poo_timer = 1000
 
     def mate(self):
@@ -327,7 +328,7 @@ class elipsalottle(animal):
            self.tail_update_timer = 3
 
         super(elipsalottle, self).move()
-            
+       
     def process(self):
         if(self.poo_timer > 0): self.poo_timer -= 1
         if(self.tail_update_timer > 0): self.tail_update_timer -= 1
@@ -367,19 +368,19 @@ class elipsalottle(animal):
         print(self.name + " has become a " + self.gender + ".")
 
 def SpawnParticle():
-    particles_append(particle("particle" + str(len(particles)), randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)))
+    particles_append(particle("particle" + str(len(particles)), rnd.randint(0, np.subtract(UNIVERSE_WIDTH, 5)), rnd.randint(0, np.subtract(UNIVERSE_HEIGHT, 5))))
 
 def SpawnParticles(amnt):
     for i in range(amnt):
-        particles_append(particle("particle" + str(len(particles)), randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)))
+        particles_append(particle("particle" + str(len(particles)), rnd.randint(0, np.subtract(UNIVERSE_WIDTH, 5)), rnd.randint(0, np.subtract(UNIVERSE_HEIGHT, 5))))
 
 def SpawnFood():
-    food_available_append(food("food" + str(len(food_available)), randint(0, UNIVERSE_WIDTH - 5), randint(0, UNIVERSE_HEIGHT - 5)))
+    food_available_append(food("food" + str(len(food_available)), rnd.randint(0, np.subtract(UNIVERSE_WIDTH, 5), rnd.randint(0, np.subtract(UNIVERSE_HEIGHT, 5)))))
 
 def ScatterFood(amount, basex, basey):
     for i in range(amount):
         spread = 50
-        food_available_append(food("food" + str(len(food_available)), randint(basex - spread, basex + spread), randint(basey - spread, basey + spread)))
+        food_available_append(food("food" + str(len(food_available)), rnd.randint(np.subtract(basex, spread), np.add(basex, spread)), rnd.randint(np.subtract(basey, spread), np.add(basey, spread))))
 
 def DropBigRedSeed(droppername, x, y):
     big_reds_append(BigRed("BigRed" + str(len(big_reds)), x, y))
@@ -441,8 +442,8 @@ while not done:
             food_available_remove(f)
 
         if(cn.CanSplit()):
-            cubeanoids_append(cubeanoid(str(cn.name) + str(len(cubeanoids)), cn.x + cn.size, cn.y + cn.size))
-            cn.energy = cn.energy / 2
+            cubeanoids_append(cubeanoid(str(cn.name) + str(len(cubeanoids)), np.add(cn.x, cn.size), np.add(cn.y, cn.size)))
+            cn.energy = np.divide(cn.energy,2)
         cn.move()
         cn.draw()
 
@@ -462,7 +463,7 @@ while not done:
         for el2 in [x for x in elipsalottles if x != el and el.CheckFieldOfView(x) and x.is_adult]: #elipsalottles:
             if(el.CheckCollision(el2)):
                 if(el.gender == el2.gender and el.is_adult):
-                    if(bool(randint(0, 1))):
+                    if(bool(rnd.randint(0, 2))):
                        el2.energy -= 5
                        el2.getNewTarget()
                     else:
