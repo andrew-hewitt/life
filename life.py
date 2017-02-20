@@ -164,9 +164,9 @@ class animal(entity):
                 self.getNewTarget()
         self.x += movx
         self.y += movy
-        if(self.x + self.size >= UNIVERSE_WIDTH): self.x = np.subtract(UNIVERSE_WIDTH, self.size)
+        if(np.add(self.x, self.size) >= UNIVERSE_WIDTH): self.x = np.subtract(UNIVERSE_WIDTH, self.size)
         if(self.x < 0): self.x = 0
-        if(self.y + self.size >= UNIVERSE_HEIGHT): self.y = np.subtract(UNIVERSE_HEIGHT, self.size)
+        if(np.add(self.y, self.size) >= UNIVERSE_HEIGHT): self.y = np.subtract(UNIVERSE_HEIGHT, self.size)
         if(self.y < 0): self.y = 0
 
     def process(self):
@@ -239,7 +239,7 @@ class BigRed(entity):
         self.energy -= self.energy_expenditure
         self.hunger += 1
 
-        if(self.energy > 0 and self.energy <= self.max_energy / 4):
+        if(self.energy > 0 and self.energy <= np.divide(self.max_energy, 4)):
             if(self.size > 0): self.size -= 2
             if(self.size > 0):
                 self.hunger -= 1
@@ -365,7 +365,7 @@ class elipsalottle(animal):
             self.gender == "male"
             self.color = (255,255,0)
 
-        print(self.name + " has become a " + self.gender + ".")
+        print("%s has become a %s." % (self.name, self.gender))
 
 def SpawnParticle():
     particles_append(particle("particle" + str(len(particles)), rnd.randint(0, np.subtract(UNIVERSE_WIDTH, 5)), rnd.randint(0, np.subtract(UNIVERSE_HEIGHT, 5))))
