@@ -20,8 +20,10 @@ clock = pygame.time.Clock()
 done = False
 
 MAX_OBJ_ENERGY = 50000
+MAX_CLUSTER_SIZE = 10
 
 particles = []
+particle_clusters = []
 food_available = []
 cubeanoids = []
 big_reds = []
@@ -29,6 +31,7 @@ elipsalottles = []
 newcreatures = []
 
 particles_append = particles.append
+particle_clusters_append = particle_clusters.append
 food_available_append = food_available.append
 cubeanoids_append = cubeanoids.append
 big_reds_append = big_reds.append
@@ -36,6 +39,7 @@ elipsalottles_append = elipsalottles.append
 new_creatures_append = newcreatures.append
 
 particles_remove = particles.remove
+particle_clusters_remove = particle_clusters.remove
 food_available_remove = food_available.remove
 cubeanoids_remove = cubeanoids.remove
 big_reds_remove = big_reds.remove
@@ -229,48 +233,109 @@ class particle(animal):
     
     def __init__(self, name, x, y):
         self.particle_type = rnd.randint(0, 5)
-        if(self.particle_type not in particle_type_data):
-            particle_type_data[self.particle_type] = {'energy': rnd.randint(1, 25000), 'color': (rnd.randint(0, 256),rnd.randint(0, 256),rnd.randint(0, 256)), 'r_str': rnd.randint(0,100), 'g_str': rnd.randint(0,100), 'b_str': rnd.randint(0,100), 'speed': rnd.randint(0,6), 'speed_str': rnd.randint(0, 100), 'tail_len': rnd.randint(1, 11), 'tail_str': rnd.randint(0, 100), 'size': rnd.randint(1, 10), 'max_size':  rnd.randint(1, 10), 'size_str': rnd.randint(0, 100), 'has_gender': rnd.randint(0, 2)}        
         self.particle_mover = rnd.randint(1, 5)
+        if(self.particle_type not in particle_type_data):
+            particle_type_data[self.particle_type] = {'energy': rnd.randint(1000, 25000), 'mover': self.particle_mover, 'color': (rnd.randint(0, 256),rnd.randint(0, 256),rnd.randint(0, 256)), 'r_str': rnd.randint(0,100), 'g_str': rnd.randint(0,100), 'b_str': rnd.randint(0,100), 'speed': rnd.randint(0,6), 'speed_str': rnd.randint(0, 100), 'tail_len': rnd.randint(1, 11), 'tail_str': rnd.randint(0, 100), 'size': rnd.randint(1, 10), 'max_size':  rnd.randint(1, 10), 'size_str': rnd.randint(0, 100), 'has_gender': rnd.randint(0, 2)}        
         animal.__init__(self, "particle", name, 1, particle_type_data[self.particle_type]['color'], x, y, 1, 1, 0, particle_type_data[self.particle_type]['speed'], [self.particle_type])
-    
-    #def move(self):
-    #    self.move_me(self.particle_mover)
 
     def process(self):
         if(self.particle_age > 0): self.particle_age -= 1
         if(self.targetx == 0 and self.targety == 0): self.getNewTarget()
         super(particle, self).process()
 
-class particle_group(animal):
+class particle_cluster(animal):
     particles = []
+    cluster_age = 500
+    
+    my_mover = 0
     
     def __init__(self, name, x, y, particle_contents):
         self.particles = particle_contents
-        animal.__init__(self, "particle", name, 1, particle_type_data[self.particle_type]['color'], x, y, 1, 1, 0, particle_type_data[self.particle_type]['speed'], particle_contents)
+        self.my_mover = rnd.randint(1, 4)
+        animal.__init__(self, "particle_cluster", name, 1, (255,255,255), x, y, 1, 1, 0, 3, particle_contents)
     
     def process(self):
-        if(self.particle_age > 0): self.particle_age -= 1
+        if(self.cluster_age > 0): self.cluster_age -= 1
         if(self.targetx == 0 and self.targety == 0): self.getNewTarget()
-        super(particle, self).process()
+        super(particle_cluster, self).process()
+    
+    def can_join(self, np_size):
+        if(len(self.particles) >= MAX_CLUSTER_SIZE or np.add(self.getEnergy(), np_size) >= MAX_OBJ_ENERGY and self.cluster_age == 0):
+            return False
+        else:
+            return True
+    
+    def getEnergy(self):
+        currenergy = 0
+        for x in self.particles:
+            currenergy += particle_type_data[x]['energy']
+        return currenergy
 
-#New and randomly generated creature
+    def add_particle(self, particle_type):
+        self.particles.append(particle_type)
+        
+    def getclustername(self):
+        nameoutput = ""
+        for p in self.particles:
+            nameoutput += chr(p + 97)
+        return nameoutput
+
+    def ready_to_spawn(self):
+        if(len(self.particles) >= MAX_CLUSTER_SIZE or self.getEnergy() >= np.subtract(MAX_OBJ_ENERGY, 1000)):
+            return True
+        else:
+            return False
+
+    def create_something(self):
+        print("Creating creature: " + self.getclustername())
+        new_creatures_append(NewCreature(self.getclustername() + str(len(newcreatures)), self.x, self.y, self.particles))
+        
+#New and randomly generated creature (unfinished)
 class NewCreature(animal):
     my_mover = 0
+    particles_inside = []
     
-    def __init__(self, name, x, y, p1, p2):
-        rgb_r = particle_type_data[p1.particle_type]['color'][0] if particle_type_data[p1.particle_type]['r_str'] > particle_type_data[p2.particle_type]['r_str'] else particle_type_data[p2.particle_type]['color'][0]
-        rgb_g = particle_type_data[p1.particle_type]['color'][1] if particle_type_data[p1.particle_type]['g_str'] > particle_type_data[p2.particle_type]['g_str'] else particle_type_data[p2.particle_type]['color'][1]
-        rgb_b = particle_type_data[p1.particle_type]['color'][2] if particle_type_data[p1.particle_type]['b_str'] > particle_type_data[p2.particle_type]['b_str'] else particle_type_data[p2.particle_type]['color'][2]
-        velocity = particle_type_data[p1.particle_type]['speed'] if particle_type_data[p1.particle_type]['speed_str'] > particle_type_data[p2.particle_type]['speed_str'] else particle_type_data[p2.particle_type]['speed']
-        max_energy = particle_type_data[p1.particle_type]['energy'] if particle_type_data[p1.particle_type]['energy'] > particle_type_data[p2.particle_type]['energy'] else particle_type_data[p2.particle_type]['energy']
-        size = particle_type_data[p1.particle_type]['size'] if particle_type_data[p1.particle_type]['size_str'] > particle_type_data[p2.particle_type]['size_str'] else particle_type_data[p2.particle_type]['size']
-        self.tail_length = particle_type_data[p1.particle_type]['tail_len'] if particle_type_data[p1.particle_type]['tail_str'] > particle_type_data[p2.particle_type]['tail_str'] else particle_type_data[p2.particle_type]['tail_len']
-        self.my_mover = p1.particle_mover if p1.energy > p2.energy else p2.particle_mover
-        animal.__init__(self, "newcreature", name, size, (rgb_r,rgb_g,rgb_b), x, y, max_energy, np.divide(max_energy, 2), np.divide(max_energy, size), velocity, [p1.particle_type, p2.particle_type])
+    def __init__(self, name, x, y, particles):
+        self.particles_inside = particles
+        
+        rgb_r_str = 0
+        rgb_g_str = 0
+        rgb_b_str = 0
+        rgb_r = 0
+        rgb_g = 0
+        rgb_b = 0
+        velocity = 0
+        max_energy = 1
+        this_energy = 0
+        size_str = 0
+        size = 1
+        tail_str = 0
+        for p in self.particles_inside:
+            if(particle_type_data[p]['r_str'] > rgb_r_str):
+                rgb_r_str = particle_type_data[p]['r_str']
+                rgb_r = particle_type_data[p]['color'][0]
+            if(particle_type_data[p]['g_str'] > rgb_g_str):
+                rgb_g_str = particle_type_data[p]['g_str']
+                rgb_g = particle_type_data[p]['color'][0]
+            if(particle_type_data[p]['b_str'] > rgb_b_str):
+                rgb_b_str = particle_type_data[p]['b_str']
+                rgb_b = particle_type_data[p]['color'][0]
+        
+            if(particle_type_data[p]['speed_str'] > velocity): velocity = particle_type_data[p]['speed'] 
+            if(particle_type_data[p]['energy'] > max_energy): max_energy = particle_type_data[p]['energy'] 
+            if(particle_type_data[p]['size_str'] > size_str):
+                size_str = particle_type_data[p]['size_str']
+                size = particle_type_data[p]['size']
+            
+            if(particle_type_data[p]['tail_str'] > tail_str):
+                tail_str = particle_type_data[p]['tail_str']
+                self.tail_length = particle_type_data[p]['tail_len']
+            
+            if(particle_type_data[p]['energy'] > this_energy):
+                this_energy = particle_type_data[p]['energy']
+                self.my_mover =  particle_type_data[p]['mover']
 
-    #def move(self):
-    #    super(NewCreature, self).move_me(self.my_mover)
+        animal.__init__(self, "newcreature", name, len(self.particles_inside), (rgb_r,rgb_g,rgb_b), x, y, max_energy, np.divide(max_energy, 2), np.divide(max_energy, size), velocity, self.particles_inside)
         
 #Double cell life, never grows but able to self-replicate
 class cubeanoid(animal):
@@ -476,17 +541,20 @@ SpawnParticles(500)
 
 def ShowStats():
     label1 = statsfont.render("Particles: " + str(len(particles)), 1, (255,255,255))
-    label2 = statsfont.render("Cubeanoids: " + str(len(cubeanoids)), 1, (255,255,255))
-    label3 = statsfont.render("Big Reds: " + str(len(big_reds)), 1, (255,255,255))
-    label4 = statsfont.render("Elipsalottles: " + str(len(elipsalottles)), 1, (255,255,255))
-    label5 = statsfont.render("New Creatures: " + str(len(newcreatures)), 1, (255,255,255))
-    label6 = statsfont.render("Food: " + str(len(food_available)), 1, (255,255,255))
+    label2 = statsfont.render("Particle Clusters: " + str(len(particle_clusters)), 1, (255,255,255))
+    label3 = statsfont.render("Cubeanoids: " + str(len(cubeanoids)), 1, (255,255,255))
+    label4 = statsfont.render("Big Reds: " + str(len(big_reds)), 1, (255,255,255))
+    label5 = statsfont.render("Elipsalottles: " + str(len(elipsalottles)), 1, (255,255,255))
+    label6 = statsfont.render("New Creatures: " + str(len(newcreatures)), 1, (255,255,255))
+    label7 = statsfont.render("Food: " + str(len(food_available)), 1, (255,255,255))
+
     screen.blit(label1, (1, 1))
     screen.blit(label2, (1, 15))
     screen.blit(label3, (1, 30))
     screen.blit(label4, (1, 45))
     screen.blit(label5, (1, 60))
     screen.blit(label6, (1, 75))
+    screen.blit(label7, (1, 90))
 
 while not done:
     screen.fill((0, 0, 0))
@@ -513,12 +581,15 @@ while not done:
                 elif(p.particle_type == 0 and p2.particle_type == 4):
                     big_reds_append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
                 else:
+                    particle_clusters_append(particle_cluster("cluster" + str(len(particle_clusters)), p.x, p.y, [p.particle_type, p2.particle_type]))
+                '''else:
+                    
                     #No object can have greater energy than the max. This prevents some particles from bonding.
                     if(np.add(p.energy, p2.energy) <= MAX_OBJ_ENERGY):
                         new_creatures_append(NewCreature("newcreature" + str(len(newcreatures)), p.x, p.y, p, p2))
                     else:
                         #prevent the next fee lines cleaning up particles that should be free to roam
-                        continue
+                        continue'''
                 try:
                     particles_remove(p)
                     particles_remove(p2)
@@ -527,6 +598,19 @@ while not done:
                     #print("Problem removing particle")
                     pass
 
+    for pc in particle_clusters:
+        if(pc.ready_to_spawn()):
+            pc.create_something()
+            particle_clusters_remove(pc)
+            continue
+        
+        for p in [x for x in particles if x != pc and pc.CheckCollision(x) and x.particle_age == 0]:
+            if(pc.can_join(particle_type_data[p.particle_type]['energy'])):
+                pc.add_particle(p.particle_type)
+                particles_remove(p)
+        pc.move_me(pc.my_mover)
+        pc.draw()
+        
     for cn in cubeanoids:
         if(cn.is_dead):
             print(cn.name + " died. :(")
