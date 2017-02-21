@@ -201,7 +201,7 @@ class animal(entity):
                self.tails.rotate(1)
                self.tails[0].x = self.x
                self.tails[0].y = self.y
-               self.tail_update_timer = 3
+               self.tail_update_timer = self.velocity
         elif(moverval == 3):
             if(self.energy >= self.max_energy): self.energy -= self.energy_expenditure
             elif(self.energy <= 0):
@@ -224,6 +224,7 @@ class particle(animal):
     particle_type = 0
     particle_mover = 0
     mover = ()
+    particle_age = 500
     
     def __init__(self, name, x, y):
         self.particle_type = rnd.randint(0, 5)
@@ -236,6 +237,7 @@ class particle(animal):
     #    self.move_me(self.particle_mover)
 
     def process(self):
+        if(self.particle_age > 0): self.particle_age -= 1
         if(self.targetx == 0 and self.targety == 0): self.getNewTarget()
         super(particle, self).process()
     
@@ -258,6 +260,7 @@ class NewCreature(animal):
         
 #Double cell life, never grows but able to self-replicate
 class cubeanoid(animal):
+    my_mover = 1
     def __init__(self, name, x, y):
         #print(name + ": I'm Alive!")
         rgb_r = particle_type_data[0]['color'][0] if particle_type_data[0]['r_str'] > particle_type_data[1]['r_str'] else particle_type_data[1]['color'][0]
@@ -473,32 +476,33 @@ while not done:
     for p in particles:
         p.process()
         p.move_me(p.particle_mover)
-        p.draw()
-
-        for p2 in [x for x in particles if x != p and x.particle_type != p.particle_type and p.CheckCollision(x)]:
-            #0-0 = nothing, 0-1 = cubanoid, 0-2 = food, 0-3 = Elipsalottle, 0-4 = Big Red
-            if(p.particle_type == 0 and p2.particle_type == 1):
-                cubeanoids_append(cubeanoid("cubeanoid" + str(len(cubeanoids)), p.x, p.y))
-            elif(p.particle_type == 0 and p2.particle_type == 2):
-                food_available_append(food("food" + str(len(food_available)), p.x, p.y))
-            elif(p.particle_type == 0 and p2.particle_type == 3):
-                elipsalottles_append(elipsalottle("elipsalottle" + str(len(elipsalottles)), p.x, p.y))
-            elif(p.particle_type == 0 and p2.particle_type == 4):
-                big_reds_append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
-            else:
-                #No object can have greater energy than the max. This prevents some particles from bonding.
-                if(np.add(p.energy, p2.energy) <= MAX_OBJ_ENERGY):
-                    new_creatures_append(NewCreature("newcreature" + str(len(newcreatures)), p.x, p.y, p, p2))
+        #p.draw()
+        
+        if(p.particle_age == 0):
+            for p2 in [x for x in particles if x != p and x.particle_type != p.particle_type and p.CheckCollision(x) and x.particle_age == 0]:
+                #0-0 = nothing, 0-1 = cubanoid, 0-2 = food, 0-3 = Elipsalottle, 0-4 = Big Red
+                if(p.particle_type == 0 and p2.particle_type == 1):
+                    cubeanoids_append(cubeanoid("cubeanoid" + str(len(cubeanoids)), p.x, p.y))
+                elif(p.particle_type == 0 and p2.particle_type == 2):
+                    food_available_append(food("food" + str(len(food_available)), p.x, p.y))
+                elif(p.particle_type == 0 and p2.particle_type == 3):
+                    elipsalottles_append(elipsalottle("elipsalottle" + str(len(elipsalottles)), p.x, p.y))
+                elif(p.particle_type == 0 and p2.particle_type == 4):
+                    big_reds_append(BigRed("BigRed" + str(len(big_reds)), p.x, p.y))
                 else:
-                    #prevent the next fee lines cleaning up particles that should be free to roam
-                    continue
-            try:
-                particles_remove(p)
-                particles_remove(p2)
-            except:
-                #sometimes particles can't be removed because at this point they are already gone.
-                #print("Problem removing particle")
-                pass
+                    #No object can have greater energy than the max. This prevents some particles from bonding.
+                    if(np.add(p.energy, p2.energy) <= MAX_OBJ_ENERGY):
+                        new_creatures_append(NewCreature("newcreature" + str(len(newcreatures)), p.x, p.y, p, p2))
+                    else:
+                        #prevent the next fee lines cleaning up particles that should be free to roam
+                        continue
+                try:
+                    particles_remove(p)
+                    particles_remove(p2)
+                except:
+                    #sometimes particles can't be removed because at this point they are already gone.
+                    #print("Problem removing particle")
+                    pass
 
     for cn in cubeanoids:
         if(cn.is_dead):
@@ -514,7 +518,7 @@ while not done:
         if(cn.CanSplit()):
             cubeanoids_append(cubeanoid(str(cn.name) + str(len(cubeanoids)), np.add(cn.x, cn.size), np.add(cn.y, cn.size)))
             cn.energy = np.divide(cn.energy,2)
-        cn.move()
+        cn.move_me(cn.my_mover)
         cn.draw()
 
     for el in elipsalottles:
@@ -580,7 +584,6 @@ while not done:
 
     for nc in newcreatures:
         if(nc.is_dead):
-            print(nc.name + " died. :(")
             new_creatures_remove(nc)
             DisposeToParticle(nc.size, nc.x, nc.y)
             continue
