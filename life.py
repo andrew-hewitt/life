@@ -201,7 +201,7 @@ class animal(entity):
                self.tails.rotate(1)
                self.tails[0].x = self.x
                self.tails[0].y = self.y
-               self.tail_update_timer = self.velocity
+               self.tail_update_timer = 1 #self.velocity
         elif(moverval == 3):
             if(self.energy >= self.max_energy): self.energy -= self.energy_expenditure
             elif(self.energy <= 0):
@@ -229,7 +229,7 @@ class particle(animal):
     def __init__(self, name, x, y):
         self.particle_type = rnd.randint(0, 5)
         if(self.particle_type not in particle_type_data):
-            particle_type_data[self.particle_type] = {'energy': rnd.randint(1, 25000), 'color': (rnd.randint(0, 256),rnd.randint(0, 256),rnd.randint(0, 256)), 'r_str': rnd.randint(0,100), 'g_str': rnd.randint(0,100), 'b_str': rnd.randint(0,100), 'speed': rnd.randint(0,6), 'speed_str': rnd.randint(0, 100), 'tail_len': rnd.randint(1, 11), 'size': rnd.randint(1, 20), 'size_str': rnd.randint(0, 100)}        
+            particle_type_data[self.particle_type] = {'energy': rnd.randint(1, 25000), 'color': (rnd.randint(0, 256),rnd.randint(0, 256),rnd.randint(0, 256)), 'r_str': rnd.randint(0,100), 'g_str': rnd.randint(0,100), 'b_str': rnd.randint(0,100), 'speed': rnd.randint(0,6), 'speed_str': rnd.randint(0, 100), 'tail_len': rnd.randint(1, 11), 'tail_str': rnd.randint(0, 100), 'size': rnd.randint(1, 20), 'size_str': rnd.randint(0, 100)}        
         self.particle_mover = rnd.randint(1, 5)
         animal.__init__(self, "particle", name, 1, particle_type_data[self.particle_type]['color'], x, y, 1, 1, 0, particle_type_data[self.particle_type]['speed'])
     
@@ -252,6 +252,7 @@ class NewCreature(animal):
         velocity = particle_type_data[p1.particle_type]['speed'] if particle_type_data[p1.particle_type]['speed_str'] > particle_type_data[p2.particle_type]['speed_str'] else particle_type_data[p2.particle_type]['speed']
         max_energy = particle_type_data[p1.particle_type]['energy'] if particle_type_data[p1.particle_type]['energy'] > particle_type_data[p2.particle_type]['energy'] else particle_type_data[p2.particle_type]['energy']
         size = particle_type_data[p1.particle_type]['size'] if particle_type_data[p1.particle_type]['size_str'] > particle_type_data[p2.particle_type]['size_str'] else particle_type_data[p2.particle_type]['size']
+        self.tail_length = particle_type_data[p1.particle_type]['tail_len'] if particle_type_data[p1.particle_type]['tail_str'] > particle_type_data[p2.particle_type]['tail_str'] else particle_type_data[p2.particle_type]['tail_len']
         self.my_mover = p1.particle_mover if p1.energy > p2.energy else p2.particle_mover
         animal.__init__(self, "newcreature", name, size, (rgb_r,rgb_g,rgb_b), x, y, max_energy, np.divide(max_energy, 2), np.divide(max_energy, size), velocity)
 
